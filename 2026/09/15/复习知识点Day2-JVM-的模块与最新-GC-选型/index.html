@@ -78,7 +78,7 @@
     
     <!--- Seo Part-->
     
-    <link rel="canonical" href="https://percyjie.github.io/tags/rag/"/>
+    <link rel="canonical" href="https://percyjie.github.io/2026/09/15/复习知识点day2-jvm-的模块与最新-gc-选型/"/>
     <meta name="robots" content="index,follow">
     <meta name="googlebot" content="index,follow">
     <meta name="revisit-after" content="1 days">
@@ -86,15 +86,20 @@
     
         
         <meta name="description" content="人没有梦想，和咸鱼有什么分别">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Percy&#39;s Note">
-<meta property="og:url" content="https://percyjie.github.io/tags/RAG/index.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day2：JVM 的模块与最新 GC 选型">
+<meta property="og:url" content="https://percyjie.github.io/2026/09/15/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day2-JVM-%E7%9A%84%E6%A8%A1%E5%9D%97%E4%B8%8E%E6%9C%80%E6%96%B0-GC-%E9%80%89%E5%9E%8B/index.html">
 <meta property="og:site_name" content="Percy&#39;s Note">
 <meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-09-15T08:19:04.000Z">
+<meta property="article:modified_time" content="2026-09-15T08:19:04.000Z">
 <meta property="article:author" content="Percy jie">
-<meta property="article:tag" content="AI, Java, Security, Blog">
+<meta property="article:tag" content="GC">
+<meta property="article:tag" content="JVM">
+<meta property="article:tag" content="复习知识点">
+<meta property="article:tag" content="面试">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
     
@@ -108,7 +113,7 @@
     
     <title>
         
-            标签: RAG | Percy&#39;s Note
+            复习知识点Day2：JVM 的模块与最新 GC 选型 | Percy&#39;s Note
         
     </title>
 
@@ -261,7 +266,7 @@
 
                             <li class="navbar-item">
                                 <!-- Menu -->
-                                <a class="active"
+                                <a class=""
                                    href="/tags"
                                         >
                                     <i class="fa-regular fa-tags fa-fw"></i>
@@ -355,7 +360,7 @@
 
                     <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
                         
-                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full active"
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
                            href="/tags"
                         >
                             <span>
@@ -407,70 +412,516 @@
 			
 
 			<div class="main-content">
-				<div class="page-template-container">
-	
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
 
-	
-	<div class="tag-name">
-    <i class="fa-solid fa-tag"></i>&nbsp;RAG
-</div>
-<div class="tag-post-list">
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day2：JVM 的模块与最新 GC 选型</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv2</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-09-15 16:19:04</span>
+        <span class="mobile">2026-09-15 16:19:04</span>
+        <span class="hover-info">创建</span>
+    </span>
     
-<div class="archive-list-container">
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-09-15 16:19:04</span>
+            <span class="mobile">2026-09-15 16:19:04</span>
+            <span class="hover-info">更新</span>
+        </span>
     
-        <section class="archive-item mb-spacing-unit last:mb-0">
-            <div class="archive-item-header flex flex-row items-center mb-2">
-                <span class="archive-year font-semibold text-3xl mr-2">2026</span>
-                <span class="archive-year-post-count text-xs md:text-sm font-bold rounded-small bg-third-background-color py-[2px] px-[10px] border border-border-color">2</span>
-            </div>
-            
-            <ul class="article-list pl-0 md:pl-8 text-lg leading-[1.5]">
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
                 
-                    
-                    
-                         <!-- Close the previous LI if not the first item -->
-                        <li class="article-item space-y-2 px-6 pt-10 pb-2 text-xl relative border-l-2 border-border-color" date-is='09-08'>
-                    
-                    <a href="/2026/09/08/ai-coding-6%E4%B8%AA%E9%9D%A2%E8%AF%95%E9%AB%98%E9%A2%91%E9%97%AE%E9%A2%98/" class="block w-fit">
-                        <span class="article-title my-0.5 text-2xl">AI Coding 时代，面试官最爱问的 6 个问题</span>
-                    </a>
-                    
                 
-                    
                     
                         
-                            </li>
-                         <!-- Close the previous LI if not the first item -->
-                        <li class="article-item space-y-2 px-6 pt-10 pb-2 text-xl relative border-l-2 border-border-color" date-is='09-05'>
+                        <li>
+                            <a href="/categories/Java/">Java</a>&nbsp;
+                        </li>
                     
-                    <a href="/2026/09/05/%E5%85%B3%E4%BA%8ERAG%E4%BD%A0%E9%9C%80%E8%A6%81%E4%BA%86%E8%A7%A3%E7%9A%84%E4%B8%9C%E8%A5%BF/" class="block w-fit">
-                        <span class="article-title my-0.5 text-2xl">关于RAG你需要了解的东西</span>
-                    </a>
                     
                 
-                </li> <!-- Ensure the last item is properly closed -->
             </ul>
-        </section>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">复习知识点</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/JVM/">JVM</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/GC/">GC</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>1.6k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>6 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
     
 </div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天的内容：<strong>JVM = 类加载子系统 + 运行时数据区 + 执行引擎（解释器 / JIT / GC）+ 本地接口与服务性接口</strong>；垃圾回收从 JDK 9 起默认一直是 <strong>G1</strong>，追求毫秒级低延迟用 <strong>ZGC</strong>，追求高吞吐用 <strong>Parallel</strong>。面试被问”JVM 现在有哪些模块”时，先答”运行时数据区”这张图，再串上类加载与 GC，层次感就有了。</p>
+</blockquote>
+<h2 id="1-JVM-现在有哪些模块"><a href="#1-JVM-现在有哪些模块" class="headerlink" title="1. JVM 现在有哪些模块"></a>1. JVM 现在有哪些模块</h2><h3 id="1-1-底层”五件套”（先记这个框架）"><a href="#1-1-底层”五件套”（先记这个框架）" class="headerlink" title="1.1 底层”五件套”（先记这个框架）"></a>1.1 底层”五件套”（先记这个框架）</h3><ol>
+<li><strong>类加载子系统</strong>：加载 → 验证 → 准备 → 解析 → 初始化，含双亲委派模型。</li>
+<li><strong>运行时数据区</strong>：程序计数器、虚拟机栈、本地方法栈、堆、方法区（JDK 8+ 为 Metaspace）。</li>
+<li><strong>执行引擎</strong>：解释器 + JIT 编译器（C1/C2，GraalVM JIT 属于实验）+ 垃圾回收器。</li>
+<li><strong>本地方法接口（JNI）</strong>：与 C / C++ 等本地代码互操作。</li>
+<li><strong>服务性接口</strong>：JVMTI、JFR、性能监控与诊断（jcmd / jstat / jmap / jstack 都基于它工作）。</li>
+</ol>
+<blockquote>
+<p>口诀：<strong>“类、内、执、本、服”五件套</strong>。</p>
+</blockquote>
+<h3 id="1-2-“模块”的第二层含义：JDK-的模块化"><a href="#1-2-“模块”的第二层含义：JDK-的模块化" class="headerlink" title="1.2 “模块”的第二层含义：JDK 的模块化"></a>1.2 “模块”的第二层含义：JDK 的模块化</h3><p>JDK 9 起”模块”还有另一个意思——<strong>JPMS（Java 模块系统）</strong>：<code>java.base</code> 是地基，<code>jdk.compiler</code>、<code>jdk.jfr</code>、<code>jdk.management</code>、<code>java.sql</code> 等按需组装，<code>jlink</code> 可以产出精简运行时。面试时如果有歧义，先确认问的是 JVM 运行时结构，还是 JDK 包模块，再展开。</p>
+<h3 id="1-3-运行时数据区速查表（必背）"><a href="#1-3-运行时数据区速查表（必背）" class="headerlink" title="1.3 运行时数据区速查表（必背）"></a>1.3 运行时数据区速查表（必背）</h3><table>
+<thead>
+<tr>
+<th>区域</th>
+<th>线程</th>
+<th>存放内容</th>
+<th>常见异常</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>程序计数器（PC）</td>
+<td>私有</td>
+<td>当前字节码行号</td>
+<td>无</td>
+</tr>
+<tr>
+<td>虚拟机栈（栈帧）</td>
+<td>私有</td>
+<td>局部变量表、操作栈、动态链接、返回地址</td>
+<td>StackOverflowError / OOM</td>
+</tr>
+<tr>
+<td>本地方法栈</td>
+<td>私有</td>
+<td>native 方法</td>
+<td>StackOverflowError</td>
+</tr>
+<tr>
+<td>堆（Heap）</td>
+<td>共享</td>
+<td>对象、数组、字符串（JDK 7+ 字符串移入堆）</td>
+<td>OOM: Java heap space</td>
+</tr>
+<tr>
+<td>方法区（Metaspace）</td>
+<td>共享</td>
+<td>类元信息、方法、字段、常量池</td>
+<td>OOM: Metaspace</td>
+</tr>
+</tbody></table>
+<p>两个高频差异点：</p>
+<ul>
+<li><strong>JDK 8</strong>：PermGen 被 <strong>Metaspace</strong> 替换，用本地内存（默认无硬上限，靠 <code>-XX:MaxMetaspaceSize</code> 兜底）。</li>
+<li><strong>JDK 7</strong>：字符串池和静态字段已移到堆里，不再属于”方法区”。</li>
+</ul>
+<h2 id="2-版本演进：最新到底有什么不同"><a href="#2-版本演进：最新到底有什么不同" class="headerlink" title="2. 版本演进：最新到底有什么不同"></a>2. 版本演进：最新到底有什么不同</h2><table>
+<thead>
+<tr>
+<th>JDK</th>
+<th>关键点</th>
+<th>面试价值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>8</td>
+<td>PermGen→Metaspace；默认 ParallelGC</td>
+<td>老基准，几乎必考”改了什么”</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>G1 成为默认 GC</strong>（JEP 248）；JDK 模块化；GC 日志改 <code>-Xlog</code></td>
+<td>“默认 GC” 答案从 9 开始变成 G1</td>
+</tr>
+<tr>
+<td>11</td>
+<td>ZGC 实验版；Epsilon 实验</td>
+<td>低延迟方向启动</td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>CMS 被移除</strong>（JEP 363）</td>
+<td>常考”CMS 哪去了”</td>
+</tr>
+<tr>
+<td>15</td>
+<td>ZGC、Shenandoah 生产可用</td>
+<td>低延迟 GC 双雄转正</td>
+</tr>
+<tr>
+<td>17（LTS）</td>
+<td>密封类等增强；性能与 GC 更稳</td>
+<td>很多团队停在这</td>
+</tr>
+<tr>
+<td>21（LTS）</td>
+<td><strong>虚拟线程</strong>（JEP 444）；<strong>分代 ZGC 初版</strong></td>
+<td>当前新特性重点</td>
+</tr>
+<tr>
+<td>23</td>
+<td><strong>分代 ZGC 成为默认</strong>（JEP 474）；非分代 ZGC 移除</td>
+<td>答题更”新”的点</td>
+</tr>
+<tr>
+<td>25（LTS，2025-09）</td>
+<td>新一代 LTS：对象头等运行时持续优化</td>
+<td>企业主要在 17/21，25 了解即可</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>记结论：<strong>JDK 9 ~ 25 默认 GC 全是 G1</strong>。</p>
+</blockquote>
+<h2 id="3-现在垃圾回收用哪个（核心）"><a href="#3-现在垃圾回收用哪个（核心）" class="headerlink" title="3. 现在垃圾回收用哪个（核心）"></a>3. 现在垃圾回收用哪个（核心）</h2><h3 id="3-1-结论先行"><a href="#3-1-结论先行" class="headerlink" title="3.1 结论先行"></a>3.1 结论先行</h3><ul>
+<li><strong>默认</strong>：G1（JDK 9 起全默认）。</li>
+<li><strong>低延迟</strong>：ZGC（JDK 15 生产可用；21 起支持分代；23 起默认分代）或 Shenandoah。</li>
+<li><strong>高吞吐</strong>：ParallelGC（JDK 8 时代默认）。</li>
+<li><strong>实验/无回收</strong>：Serial、Epsilon。</li>
+<li><strong>CMS 是历史</strong>：JDK 9 弃用、JDK 14 移除。</li>
+</ul>
+<h3 id="3-2-选型速查表"><a href="#3-2-选型速查表" class="headerlink" title="3.2 选型速查表"></a>3.2 选型速查表</h3><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>选什么 GC</th>
+<th>参数</th>
+<th>一句话理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>默认/大多数服务</td>
+<td>G1（默认）</td>
+<td><code>-XX:MaxGCPauseMillis=200</code></td>
+<td>Region 化、暂停目标可调、吞吐均衡</td>
+</tr>
+<tr>
+<td>超大堆 + 毫秒级暂停</td>
+<td>ZGC</td>
+<td><code>-XX:+UseZGC</code>（JDK 21+ 分代）</td>
+<td>读屏障+染色指针，暂停与堆大小关系小</td>
+</tr>
+<tr>
+<td>吞吐优先（批处理）</td>
+<td>Parallel</td>
+<td><code>-XX:+UseParallelGC</code></td>
+<td>多线程并行回收，暂停可长但吞吐高</td>
+</tr>
+<tr>
+<td>其他低延迟选择</td>
+<td>Shenandoah</td>
+<td><code>-XX:+UseShenandoahGC</code>（JDK 15+）</td>
+<td>并发移动对象，语义类似 ZGC</td>
+</tr>
+<tr>
+<td>压测 GC 成本</td>
+<td>Epsilon</td>
+<td>实验开关</td>
+<td>只分配不回收</td>
+</tr>
+</tbody></table>
+<h3 id="3-3-生产参数模板（背下来）"><a href="#3-3-生产参数模板（背下来）" class="headerlink" title="3.3 生产参数模板（背下来）"></a>3.3 生产参数模板（背下来）</h3><div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">java -Xms4g -Xmx4g \</span><br><span class="line">     -XX:MaxMetaspaceSize=512m \</span><br><span class="line">     -XX:+UseG1GC -XX:MaxGCPauseMillis=200 \</span><br><span class="line">     -Xlog:gc:file=gc.log:<span class="keyword">time</span>,<span class="built_in">uptime</span>,level,tags \</span><br><span class="line">     -XX:+HeapDumpOnOutOfMemoryError \</span><br><span class="line">     -XX:HeapDumpPath=/tmp/app.hprof \</span><br><span class="line">     -jar app.jar</span><br></pre></td></tr></table></figure></div>
+
+<p>容器场景注意：JVM 默认按宿主机物理内存算默认堆（约 1/4），容器里建议：</p>
+<div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">-XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=50</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="4-需要注意的点（生产经验）"><a href="#4-需要注意的点（生产经验）" class="headerlink" title="4. 需要注意的点（生产经验）"></a>4. 需要注意的点（生产经验）</h2><ol>
+<li><strong>别只调堆大小</strong>：Xmx 越大，GC 暂停和 Full GC 压力往往越高；先看 GC 日志/指标再调。</li>
+<li><strong>内存分四口</strong>：堆、栈、Metaspace、直接内存（Netty/DirectByteBuffer）异常名不同，”OOM”不全是堆。</li>
+<li><strong>G1 大对象（Humongous）</strong>：超过 Region 一半的对象直接进老年代，频繁大数组会让老年代暴涨、提前 Full GC，考虑池化/分块。</li>
+<li><strong>Metaspace 必须兜底</strong>：动态代理、CGLIB、热部署会不停生成类，务必 <code>-XX:MaxMetaspaceSize</code>。</li>
+<li><strong>GC 日志写法已换</strong>：JDK 9+ 用 <code>-Xlog:gc*</code> 代替 <code>-XX:+PrintGCDetails</code>（后者已废弃）。</li>
+<li><strong>排查顺序</strong>：<code>jstat -gcutil &lt;pid&gt;</code> 看 GC 频率 → <code>jcmd &lt;pid&gt; GC.heap_info</code> → 必要时 <code>jmap -dump</code> 出堆 → MAT/Arthas 分析。</li>
+</ol>
+<h2 id="5-常见面试题（背这组）"><a href="#5-常见面试题（背这组）" class="headerlink" title="5. 常见面试题（背这组）"></a>5. 常见面试题（背这组）</h2><table>
+<thead>
+<tr>
+<th>问题</th>
+<th>一句话答案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JVM 有哪些运行时区？</td>
+<td>5 个：PC、虚拟机栈、本地方法栈、堆、方法区（Metaspace）</td>
+</tr>
+<tr>
+<td>怎么判断对象已死？</td>
+<td>可达性分析（从 GC Roots），不是引用计数</td>
+</tr>
+<tr>
+<td>GC Roots 有哪些？</td>
+<td>栈上局部变量、静态字段、JNI 引用、活跃线程等</td>
+</tr>
+<tr>
+<td>对象创建路径？</td>
+<td>类加载→内存分配（TLAB 优先）→内存置零→设置对象头→构造函数</td>
+</tr>
+<tr>
+<td>为什么 JDK9+ 默认 G1？</td>
+<td>Region 化+暂停目标可调，吞吐/延迟折中</td>
+</tr>
+<tr>
+<td>CMS 为什么没了？</td>
+<td>碎片多、并发失败回调 Full GC，JDK14 移除</td>
+</tr>
+<tr>
+<td>ZGC 为什么停顿低？</td>
+<td>染色指针+读屏障，GC 与业务并发，暂停不随堆增大</td>
+</tr>
+<tr>
+<td>三色标记漏标怎么防？</td>
+<td>SATB（G1）/ 增量更新（CMS）</td>
+</tr>
+<tr>
+<td>Full GC 频繁怎么排？</td>
+<td>GC 日志 → jstat → dump → MAT；根因多为大对象/泄漏/元空间</td>
+</tr>
+<tr>
+<td>现在默认用哪个 GC？</td>
+<td>G1（JDK 9~25），低延迟 ZGC</td>
+</tr>
+</tbody></table>
+<h2 id="6-自测三问"><a href="#6-自测三问" class="headerlink" title="6. 自测三问"></a>6. 自测三问</h2><ol>
+<li>JDK 8 / 17 / 21 各有哪些 GC 相关变化？各说 1-2 个。</li>
+<li>生产出现持续 Full GC，给出完整排查命令顺序。</li>
+<li>“默认 GC = G1” 从哪个 JDK 开始成立？</li>
+</ol>
+<hr>
+<blockquote>
+<p>下一篇预告：可以复习”线上 JVM 问题排查与案例”（Day3）。先把今天的 5 区域图与 GC 选型表记牢，比背更多细节更划算。</p>
+</blockquote>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day2：JVM 的模块与最新 GC 选型</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-09-15 16:19:04</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-09-15 16:19:04
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/09/15/复习知识点Day2-JVM-的模块与最新-GC-选型/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
 </div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%9D%A2%E8%AF%95/">#面试</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">#复习知识点</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/JVM/">#JVM</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/GC/">#GC</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/09/14/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day1-AI%E7%9A%84Skill%E4%B8%8EMCP%E7%9A%84%E4%BD%BF%E7%94%A8%E5%92%8C%E6%B3%A8%E6%84%8F%E7%82%B9/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day1：AI 的 Skill 与 MCP 的使用和注意点</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
 	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day2：JVM 的模块与最新 GC 选型</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-JVM-%E7%8E%B0%E5%9C%A8%E6%9C%89%E5%93%AA%E4%BA%9B%E6%A8%A1%E5%9D%97"><span class="nav-text">1. JVM 现在有哪些模块</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%BA%95%E5%B1%82%E2%80%9D%E4%BA%94%E4%BB%B6%E5%A5%97%E2%80%9D%EF%BC%88%E5%85%88%E8%AE%B0%E8%BF%99%E4%B8%AA%E6%A1%86%E6%9E%B6%EF%BC%89"><span class="nav-text">1.1 底层”五件套”（先记这个框架）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E2%80%9C%E6%A8%A1%E5%9D%97%E2%80%9D%E7%9A%84%E7%AC%AC%E4%BA%8C%E5%B1%82%E5%90%AB%E4%B9%89%EF%BC%9AJDK-%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8C%96"><span class="nav-text">1.2 “模块”的第二层含义：JDK 的模块化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E9%80%9F%E6%9F%A5%E8%A1%A8%EF%BC%88%E5%BF%85%E8%83%8C%EF%BC%89"><span class="nav-text">1.3 运行时数据区速查表（必背）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E7%89%88%E6%9C%AC%E6%BC%94%E8%BF%9B%EF%BC%9A%E6%9C%80%E6%96%B0%E5%88%B0%E5%BA%95%E6%9C%89%E4%BB%80%E4%B9%88%E4%B8%8D%E5%90%8C"><span class="nav-text">2. 版本演进：最新到底有什么不同</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E7%8E%B0%E5%9C%A8%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E7%94%A8%E5%93%AA%E4%B8%AA%EF%BC%88%E6%A0%B8%E5%BF%83%EF%BC%89"><span class="nav-text">3. 现在垃圾回收用哪个（核心）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E7%BB%93%E8%AE%BA%E5%85%88%E8%A1%8C"><span class="nav-text">3.1 结论先行</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E9%80%89%E5%9E%8B%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="nav-text">3.2 选型速查表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E7%94%9F%E4%BA%A7%E5%8F%82%E6%95%B0%E6%A8%A1%E6%9D%BF%EF%BC%88%E8%83%8C%E4%B8%8B%E6%9D%A5%EF%BC%89"><span class="nav-text">3.3 生产参数模板（背下来）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E9%9C%80%E8%A6%81%E6%B3%A8%E6%84%8F%E7%9A%84%E7%82%B9%EF%BC%88%E7%94%9F%E4%BA%A7%E7%BB%8F%E9%AA%8C%EF%BC%89"><span class="nav-text">4. 需要注意的点（生产经验）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%88%E8%83%8C%E8%BF%99%E7%BB%84%EF%BC%89"><span class="nav-text">5. 常见面试题（背这组）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E8%87%AA%E6%B5%8B%E4%B8%89%E9%97%AE"><span class="nav-text">6. 自测三问</span></a></li></ol>
 
-	<div class="page-template-content markdown-body">
-		
-
-		
-	</div>
-
-	<div class="page-template-comments">
-		
 	</div>
 </div>
-
-<div class="paginator">
-	<span class="page-number current">1</span>
+	</div>
+	
 </div>
-  
+
 			</div>
 
 			
@@ -552,6 +1003,26 @@
 		</div>
 	</div>
 
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
 	
 
 	<div class="right-side-tools-container">
@@ -676,6 +1147,7 @@
         }),
     );
 </script>
+
 
 
 

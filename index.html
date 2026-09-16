@@ -511,7 +511,7 @@
 
         <div class="statistics flex justify-around my-2.5">
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
-        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">39</div>
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">41</div>
         <div class="label text-third-text-color text-sm">标签</div>
     </a>
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
@@ -519,7 +519,7 @@
         <div class="label text-third-text-color text-sm">分类</div>
     </a>
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
-        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">12</div>
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">13</div>
         <div class="label text-third-text-color text-sm">文章</div>
     </a>
 </div>
@@ -588,7 +588,7 @@
 </div>
                 <div class="statistics flex justify-around my-2.5">
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
-        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">39</div>
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">41</div>
         <div class="label text-third-text-color text-sm">标签</div>
     </a>
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
@@ -596,7 +596,7 @@
         <div class="label text-third-text-color text-sm">分类</div>
     </a>
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
-        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">12</div>
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">13</div>
         <div class="label text-third-text-color text-sm">文章</div>
     </a>
 </div>
@@ -611,6 +611,99 @@
 			<div class="main-content">
 				<div class="home-content-container">
     <ul class="home-article-list">
+        
+            <li class="home-article-item">
+
+                
+
+                
+
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-7">
+                    <h3 class="home-article-title">
+                        <a href="/2026/09/16/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day3-JVM-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98%E4%B8%8E%E7%BA%BF%E4%B8%8A%E6%8E%92%E6%9F%A5/">
+                            复习知识点Day3：JVM 垃圾回收调优与线上排查
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            
+                            
+一句话记住今天的内容：JVM 调优不是调参数，是”先用工具定位问题，再改最少的东西”。线上九成的”调优”其实是排查：CPU 飙高先找线程栈，内存上涨先看 GC 与堆 dump；参数永远是最后一步。
+
+1. 调优前提：先定指标，再动手没有指标的调优都是玄学。默认盯四组数：
+
+
+
+指标
+含义
+正常参考
+
+
+
+吞吐量
+用户代码运行时间占比（1 - GC 时间/总时间）
+追求越高越好，一般 99%...
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Wed Sep 16 2026 17:59:58 GMT+0800">
+                
+                    2026-09-16
+                
+            </span>
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Java/">Java</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">复习知识点</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/JVM/">JVM</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/GC/">GC</a>&nbsp;
+                        </li>
+                    
+                </ul>
+            </span>
+        
+    </div>
+
+    <a href="/2026/09/16/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day3-JVM-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98%E4%B8%8E%E7%BA%BF%E4%B8%8A%E6%8E%92%E6%9F%A5/">阅读全文<span class="seo-reader-text">复习知识点Day3：JVM 垃圾回收调优与线上排查</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
         
             <li class="home-article-item">
 
@@ -1347,84 +1440,6 @@ AI 不会让软件工程师失去价值，但它会重新定义“会写代码�
                 </div>
             </li>
         
-            <li class="home-article-item">
-
-                
-
-                
-
-                
-                <div class="flex flex-col gap-5 px-7 pb-7 pt-7">
-                    <h3 class="home-article-title">
-                        <a href="/2026/08/10/fastjson-rce-cve-2026-16723-qvd-2026-45876/">
-                            FastJSON 2026 高危漏洞全景：CVE-2026-16723 与 QVD-2026-45876 剖析与应对
-                        </a>
-                    </h3>
-
-                    <div class="home-article-content markdown-body">
-                        
-                            
-                            2026 年 7 月，Java 生态中最常用的 JSON 库之一 FastJSON 家族连续曝出两个高危远程代码执行（RCE）漏洞：一个是影响 fastjson 1.x 的 CVE-2026-16723（已在野利用），另一个是影响 fastjson2 的 QVD-2026-45876。这两次漏洞最值得警惕的地方在于：它们都打破了此前“默认配置下不开 AutoType 就安全”的共识，攻击者无...
-                        
-                    </div>
-
-                    <div class="home-article-meta-info-container">
-    <div class="home-article-meta-info">
-        <span><i class="fa-solid fa-calendars"></i>&nbsp;
-            <span class="home-article-date" data-date="Mon Aug 10 2026 09:00:00 GMT+0800">
-                
-                    2026-08-10
-                
-            </span>
-        </span>
-        
-            <span class="home-article-category">
-                <i class="fa-solid fa-folders"></i>&nbsp;
-            <ul>
-                
-                
-                    
-                        
-                        <li>
-                            <a href="/categories/%E5%AE%89%E5%85%A8/">安全</a>&nbsp;
-                        </li>
-                    
-                    
-                
-            </ul>
-        </span>
-        
-        
-            <span class="home-article-tag">
-                <i class="fa-solid fa-tags"></i>&nbsp;
-                <ul>
-                    
-                        <li>
-                            
-                            <a href="/tags/Java/">Java</a>&nbsp;
-                        </li>
-                    
-                        <li>
-                            | 
-                            <a href="/tags/%E5%AE%89%E5%85%A8/">安全</a>&nbsp;
-                        </li>
-                    
-                        <li>
-                            | 
-                            <a href="/tags/FastJSON/">FastJSON</a>&nbsp;
-                        </li>
-                    
-                </ul>
-            </span>
-        
-    </div>
-
-    <a href="/2026/08/10/fastjson-rce-cve-2026-16723-qvd-2026-45876/">阅读全文<span class="seo-reader-text">FastJSON 2026 高危漏洞全景：CVE-2026-16723 与 QVD-2026-45876 剖析与应对</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
-</div>
-
-                </div>
-            </li>
-        
     </ul>
 
     <div class="home-paginator px-7 py-5">
@@ -1455,11 +1470,11 @@ AI 不会让软件工程师失去价值，但它会重新定义“会写代码�
                 
                 <p class="post-count space-x-0.5">
                     <span>
-                        共撰写了 12 篇文章
+                        共撰写了 13 篇文章
                     </span>
                     
                         <span>
-                            共 22.9k 字
+                            共 24.7k 字
                         </span>
                     
                 </p>

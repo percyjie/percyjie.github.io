@@ -78,7 +78,7 @@
     
     <!--- Seo Part-->
     
-    <link rel="canonical" href="https://percyjie.github.io/categories/前端/"/>
+    <link rel="canonical" href="https://percyjie.github.io/2026/09/17/复习知识点day4-arthas-在线诊断与排障实战/"/>
     <meta name="robots" content="index,follow">
     <meta name="googlebot" content="index,follow">
     <meta name="revisit-after" content="1 days">
@@ -86,15 +86,21 @@
     
         
         <meta name="description" content="人没有梦想，和咸鱼有什么分别">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Percy&#39;s Note">
-<meta property="og:url" content="https://percyjie.github.io/categories/%E5%89%8D%E7%AB%AF/index.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day4：Arthas 在线诊断与排障实战">
+<meta property="og:url" content="https://percyjie.github.io/2026/09/17/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day4-Arthas-%E5%9C%A8%E7%BA%BF%E8%AF%8A%E6%96%AD%E4%B8%8E%E6%8E%92%E9%9A%9C%E5%AE%9E%E6%88%98/index.html">
 <meta property="og:site_name" content="Percy&#39;s Note">
 <meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-09-17T09:31:28.000Z">
+<meta property="article:modified_time" content="2026-09-17T09:31:28.000Z">
 <meta property="article:author" content="Percy jie">
-<meta property="article:tag" content="AI, Java, Security, Blog">
+<meta property="article:tag" content="Arthas">
+<meta property="article:tag" content="Java">
+<meta property="article:tag" content="复习知识点">
+<meta property="article:tag" content="实践">
+<meta property="article:tag" content="排障">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
     
@@ -108,7 +114,7 @@
     
     <title>
         
-            分类: 前端 | Percy&#39;s Note
+            复习知识点Day4：Arthas 在线诊断与排障实战 | Percy&#39;s Note
         
     </title>
 
@@ -244,7 +250,7 @@
 
                             <li class="navbar-item">
                                 <!-- Menu -->
-                                <a class="active"
+                                <a class=""
                                    href="/categories"
                                         >
                                     <i class="fa-regular fa-folder fa-fw"></i>
@@ -335,7 +341,7 @@
 
                     <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
                         
-                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full active"
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
                            href="/categories"
                         >
                             <span>
@@ -407,59 +413,484 @@
 			
 
 			<div class="main-content">
-				<div class="page-template-container">
-	
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
 
-	
-	<div class="category-name">
-    <i class="fa-solid fa-folder"></i>&nbsp;前端
-</div>
-<div class="category-post-list">
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day4：Arthas 在线诊断与排障实战</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv2</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-09-17 17:31:28</span>
+        <span class="mobile">2026-09-17 17:31:28</span>
+        <span class="hover-info">创建</span>
+    </span>
     
-<div class="archive-list-container">
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-09-17 17:31:28</span>
+            <span class="mobile">2026-09-17 17:31:28</span>
+            <span class="hover-info">更新</span>
+        </span>
     
-        <section class="archive-item mb-spacing-unit last:mb-0">
-            <div class="archive-item-header flex flex-row items-center mb-2">
-                <span class="archive-year font-semibold text-3xl mr-2">2026</span>
-                <span class="archive-year-post-count text-xs md:text-sm font-bold rounded-small bg-third-background-color py-[2px] px-[10px] border border-border-color">1</span>
-            </div>
-            
-            <ul class="article-list pl-0 md:pl-8 text-lg leading-[1.5]">
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
                 
                     
+                        
+                        <li>
+                            <a href="/categories/Java/">Java</a>&nbsp;
+                        </li>
                     
-                         <!-- Close the previous LI if not the first item -->
-                        <li class="article-item space-y-2 px-6 pt-10 pb-2 text-xl relative border-l-2 border-border-color" date-is='09-09'>
-                    
-                    <a href="/2026/09/09/%E5%90%8E%E7%AB%AF%E5%BC%80%E5%8F%91%E5%85%A5%E9%97%A8-Vue/" class="block w-fit">
-                        <span class="article-title my-0.5 text-2xl">后端开发入门 Vue：从接口思维到组件思维</span>
-                    </a>
                     
                 
-                </li> <!-- Ensure the last item is properly closed -->
             </ul>
-        </section>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/Java/">Java</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">复习知识点</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Arthas/">Arthas</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E6%8E%92%E9%9A%9C/">排障</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%AE%9E%E8%B7%B5/">实践</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>1.6k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>6 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
     
 </div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天的内容：<strong>Arthas = 免重启的 Java 在线诊断神器</strong>。它的核心价值是”不改代码、不重启、直接进生产 JVM 里看线程、看方法耗时、看对象、改日志级别”。面试答 Arthas 就抓三件事：<strong>是什么（attach+字节码增强）→ 常用命令（dashboard/thread/watch/trace）→ 用在哪类问题（CPU 高、接口慢、日志排障）</strong>。</p>
+</blockquote>
+<h2 id="1-Arthas-是什么"><a href="#1-Arthas-是什么" class="headerlink" title="1. Arthas 是什么"></a>1. Arthas 是什么</h2><p>阿里巴巴开源的 Java 在线诊断工具：把一段 agent 通过 <strong>Attach API</strong> 挂进目标 JVM，用字节码增强（Instrumentation + ASM）注入监控逻辑，从而做到：</p>
+<ul>
+<li><strong>不改代码、不重启</strong>就能看运行中的类和方法。</li>
+<li>支持 <strong>watch（参数/返回值/异常）、trace（调用耗时）、stack（调用栈）、tt（调用回放）</strong> 等强大能力。</li>
+<li>命令行交互（Telnet/WebSocket），轻量、可灰度使用。</li>
+</ul>
+<blockquote>
+<p>对比：<code>jstack</code> 只能拍线程快照；Arthas 是”活的显微镜”——可以盯着某个方法每次调用往里看。</p>
+</blockquote>
+<h2 id="2-安装与启动（30-秒上手）"><a href="#2-安装与启动（30-秒上手）" class="headerlink" title="2. 安装与启动（30 秒上手）"></a>2. 安装与启动（30 秒上手）</h2><div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 1. 下载启动器</span></span><br><span class="line">curl -O https://arthas.aliyun.com/arthas-boot.jar</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 启动并选择要 attach 的 Java 进程（会列出本机 java 进程）</span></span><br><span class="line">java -jar arthas-boot.jar</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 也可以直接指定 PID</span></span><br><span class="line">jps</span><br><span class="line">java -jar arthas-boot.jar &lt;pid&gt;</span><br></pre></td></tr></table></figure></div>
+
+<p>进入后先输入 <code>help</code> 看全部命令，输入 <code>dashboard</code> 看全局面板。退出用 <code>exit</code>（不会杀业务进程）；Arthas 服务本身可以 <code>stop</code> 关闭。</p>
+<blockquote>
+<p>安全提醒：<strong>Arthas 拥有 attach JVM 的超级权限</strong>（能改类、执行表达式）。生产环境别随便暴露，正式环境建议走权限控制/白名单，用完及时退出并按需 <code>stop</code>。</p>
+</blockquote>
+<h2 id="3-核心命令速查（背熟这-10-个）"><a href="#3-核心命令速查（背熟这-10-个）" class="headerlink" title="3. 核心命令速查（背熟这 10 个）"></a>3. 核心命令速查（背熟这 10 个）</h2><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>作用</th>
+<th>一句话示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>dashboard</code></td>
+<td>线程/内存/GC 总览</td>
+<td><code>dashboard</code></td>
+</tr>
+<tr>
+<td><code>thread -n 3</code></td>
+<td>打印 CPU 最高的 3 个线程</td>
+<td><code>thread -n 3</code></td>
+</tr>
+<tr>
+<td><code>thread -b</code></td>
+<td>找阻塞中的线程（死锁/锁等待）</td>
+<td><code>thread -b</code></td>
+</tr>
+<tr>
+<td><code>jvm</code></td>
+<td>JVM 运行时信息</td>
+<td><code>jvm</code></td>
+</tr>
+<tr>
+<td><code>sysprop</code> / <code>sysenv</code></td>
+<td>系统属性/环境变量</td>
+<td><code>sysprop java.version</code></td>
+</tr>
+<tr>
+<td><code>sc</code> / <code>sm</code></td>
+<td>类/方法定位（可带 <code>-d</code> 看详情）</td>
+<td><code>sc -d com.example.service.UserService</code></td>
+</tr>
+<tr>
+<td><code>jad</code></td>
+<td>反编译线上类</td>
+<td><code>jad com.example.controller.OrderController</code></td>
+</tr>
+<tr>
+<td><code>watch</code></td>
+<td>观察方法参数/返回值/异常</td>
+<td><code>watch com.example.OrderService getStatus &#39;{params, returnObj, throwExp}&#39; -x 3 -n 5</code></td>
+</tr>
+<tr>
+<td><code>trace</code></td>
+<td>方法调用链路耗时（定位慢点）</td>
+<td><code>trace com.example.OrderService createOrder &#39;#cost &gt; 100&#39;</code></td>
+</tr>
+<tr>
+<td><code>stack</code></td>
+<td>打印调用栈</td>
+<td><code>stack com.example.OrderService createOrder</code></td>
+</tr>
+<tr>
+<td><code>tt</code></td>
+<td>时空隧道：录调用现场回放</td>
+<td><code>tt -t com.example.OrderService createOrder</code></td>
+</tr>
+<tr>
+<td><code>monitor -c 5</code></td>
+<td>每 5 秒统计方法调用次数/成功率</td>
+<td><code>monitor -c 5 com.example.OrderService createOrder</code></td>
+</tr>
+<tr>
+<td><code>logger --name ROOT --level DEBUG</code></td>
+<td>动态改日志级别，不用重启</td>
+<td><code>logger --name ROOT --level DEBUG</code></td>
+</tr>
+<tr>
+<td><code>ognl</code></td>
+<td>执行表达式（看/改对象值）</td>
+<td><code>ognl &#39;@java.lang.System@getProperty(&quot;user.dir&quot;)&#39;</code></td>
+</tr>
+<tr>
+<td><code>heapdump</code></td>
+<td>导出堆文件</td>
+<td><code>heapdump --path /tmp/app.hprof</code></td>
+</tr>
+<tr>
+<td><code>profiler start</code> / <code>stop</code></td>
+<td>CPU/内存火焰图（集成 async-profiler）</td>
+<td><code>profiler start &amp;&amp; sleep 60 &amp;&amp; profiler stop</code></td>
+</tr>
+</tbody></table>
+<h2 id="4-使用技巧（实战精华）"><a href="#4-使用技巧（实战精华）" class="headerlink" title="4. 使用技巧（实战精华）"></a>4. 使用技巧（实战精华）</h2><h3 id="4-1-先”读”后”写”，安全排障"><a href="#4-1-先”读”后”写”，安全排障" class="headerlink" title="4.1 先”读”后”写”，安全排障"></a>4.1 先”读”后”写”，安全排障</h3><ul>
+<li><strong>只读命令优先</strong>：<code>dashboard</code>、<code>thread</code>、<code>jvm</code>、<code>sysprop</code>、<code>heapdump</code> 不会改 JVM 行为，先摸清全局。</li>
+<li><strong>增强命令慎用</strong>：<code>watch</code>/<code>trace</code>/<code>tt</code> 会做字节码增强，对<strong>高频方法</strong>有额外开销。生产紧急排查可以短暂使用，用完执行 <code>reset</code> 还原。</li>
+<li><strong>动态改东西先确认后果</strong>：<code>logger --level DEBUG</code>、<code>ognl</code> 改值、<code>redefine</code> 热更新，必须先评估影响面，改完持续观察。</li>
+</ul>
+<h3 id="4-2-watch-的威力（最常用）"><a href="#4-2-watch-的威力（最常用）" class="headerlink" title="4.2 watch 的威力（最常用）"></a>4.2 watch 的威力（最常用）</h3><div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 观察某方法：入参、返回值、异常、执行耗时</span></span><br><span class="line">watch com.example.service.OrderService createOrder \</span><br><span class="line">  <span class="string">&#x27;&#123;params, returnObj, throwExp, cost&#125;&#x27;</span> -x 2 -n 3</span><br><span class="line"></span><br><span class="line"><span class="comment"># 只看异常</span></span><br><span class="line">watch com.example.service.OrderService createOrder throwExp -x 2</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li><code>-x</code> 控制对象展开深度，避免打出超大对象。</li>
+<li><code>-n</code> 控制打印次数，防止刷屏。</li>
+</ul>
+<h3 id="4-3-trace-定位”慢在哪”"><a href="#4-3-trace-定位”慢在哪”" class="headerlink" title="4.3 trace 定位”慢在哪”"></a>4.3 trace 定位”慢在哪”</h3><div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 只打印耗时超过 100ms 的调用链</span></span><br><span class="line">trace com.example.OrderService createOrder <span class="string">&#x27;#cost &gt; 100&#x27;</span> --skipJDKMethod <span class="literal">false</span></span><br></pre></td></tr></table></figure></div>
+
+<p><code>trace</code> 会展示<strong>方法内部子调用耗时</strong>，特别适合”接口慢但不知道是 DB、RPC 还是 GC”的场景。</p>
+<h3 id="4-4-动态排障三板斧"><a href="#4-4-动态排障三板斧" class="headerlink" title="4.4 动态排障三板斧"></a>4.4 动态排障三板斧</h3><ol>
+<li><strong>日志级别</strong>：线上 <code>logger --name com.example.order --level DEBUG</code>，配合热刷新不了日志配置时就不用重启。</li>
+<li><strong>看参数/返回值</strong>：<code>watch</code> 一两行命令，不改代码、不重启就能直接看结果。</li>
+<li><strong>看调用栈</strong>：<code>stack</code> + <code>thread</code> 组合判断并发路径。</li>
+</ol>
+<h2 id="5-排查问题方式（场景实战）"><a href="#5-排查问题方式（场景实战）" class="headerlink" title="5. 排查问题方式（场景实战）"></a>5. 排查问题方式（场景实战）</h2><h3 id="5-1-线上接口慢"><a href="#5-1-线上接口慢" class="headerlink" title="5.1 线上接口慢"></a>5.1 线上接口慢</h3><div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 1. 看是不是慢在方法内部</span></span><br><span class="line">trace com.example.order.OrderService createOrder <span class="string">&#x27;#cost &gt; 300&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 或直接抓参数和耗时</span></span><br><span class="line">watch com.example.order.OrderService createOrder \</span><br><span class="line">  <span class="string">&#x27;&#123;params, return, cost&#125;&#x27;</span> -x 2 -n 5</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 再对比 dashboard：看老年代占比、GC 频率，判断是否为 GC 停顿</span></span><br></pre></td></tr></table></figure></div>
+
+<h3 id="5-2-线上-CPU-飙高"><a href="#5-2-线上-CPU-飙高" class="headerlink" title="5.2 线上 CPU 飙高"></a>5.2 线上 CPU 飙高</h3><div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">thread -n 3        <span class="comment"># 找出 CPU 最高的线程</span></span><br><span class="line">thread &lt;tid&gt;       <span class="comment"># 看该线程状态</span></span><br><span class="line">stack &lt;class&gt; &lt;method&gt;   <span class="comment"># 看栈</span></span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li>若栈上是 GC Thread：说明 GC 风暴，再看 <code>vmoption</code>/堆。</li>
+<li>若栈上是业务线程（死循环 / System.out.println 刷屏 / JSON 序列化）：定位到代码行。</li>
+</ul>
+<h3 id="5-3-内存-堆问题（泄漏、大对象）"><a href="#5-3-内存-堆问题（泄漏、大对象）" class="headerlink" title="5.3 内存/堆问题（泄漏、大对象）"></a>5.3 内存/堆问题（泄漏、大对象）</h3><div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 1. 看堆使用</span></span><br><span class="line">memory</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 出堆文件，丢 MAT / eclipse memory analyzer</span></span><br><span class="line">heapdump --path /tmp/hprof</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 进一步看类实例数（分布或对比两次 dump）</span></span><br><span class="line">vmtool --action getInstances --className com.example.Cache -x 3</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="5-4-类版本不对-方法找不到"><a href="#5-4-类版本不对-方法找不到" class="headerlink" title="5.4 类版本不对 / 方法找不到"></a>5.4 类版本不对 / 方法找不到</h3><div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">sc -d com.example.UserService    <span class="comment"># 类加载器、来源</span></span><br><span class="line">jad com.example.UserService        <span class="comment"># 反编译确认线上字节码</span></span><br><span class="line">classloader -t                    <span class="comment"># 看类加载器树（排查 ClassLoader 泄漏）</span></span><br></pre></td></tr></table></figure></div>
+
+<h3 id="5-5-调日志不重启"><a href="#5-5-调日志不重启" class="headerlink" title="5.5 调日志不重启"></a>5.5 调日志不重启</h3><div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">logger --name com.example.order --level DEBUG</span><br><span class="line"><span class="comment"># 验证</span></span><br><span class="line">logger</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="6-常见面试题（背这组）"><a href="#6-常见面试题（背这组）" class="headerlink" title="6. 常见面试题（背这组）"></a>6. 常见面试题（背这组）</h2><table>
+<thead>
+<tr>
+<th>问题</th>
+<th>一句话要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Arthas 原理？</td>
+<td>基于 JVM Attach 注入 agent，字节码增强实现 watchdog/trace，无需重启</td>
+</tr>
+<tr>
+<td>和 jstack/jmap 区别？</td>
+<td>它们是快照，Arthas 是”在线显微镜”，可观察方法级行为</td>
+</tr>
+<tr>
+<td><code>watch</code> 和 <code>trace</code> 区别？</td>
+<td>watch 抓方法输入输出/异常，trace 看调用链里每一段耗时</td>
+</tr>
+<tr>
+<td>生产用 Arthas 注意什么？</td>
+<td>权限管控、只读优先、高频方法慎增强、用完 <code>reset</code></td>
+</tr>
+<tr>
+<td>查接口慢最常用哪个？</td>
+<td><code>trace</code>（含耗时）或 <code>watch + cost</code></td>
+</tr>
+<tr>
+<td>查 CPU 高最常用哪条？</td>
+<td><code>thread -n 3</code> 找最忙线程</td>
+</tr>
+<tr>
+<td>改日志级别？</td>
+<td><code>logger --level DEBUG</code>（运行时）</td>
+</tr>
+<tr>
+<td>堆导出？</td>
+<td><code>heapdump --path ...</code>，配合 MAT 分析</td>
+</tr>
+<tr>
+<td>谁开源的？</td>
+<td>阿里开源；命令可用 <code>help</code> / <code>help &lt;cmd&gt;</code> 随时看</td>
+</tr>
+</tbody></table>
+<h2 id="7-自测三问"><a href="#7-自测三问" class="headerlink" title="7. 自测三问"></a>7. 自测三问</h2><ol>
+<li>生产接口偶发慢，你会用哪两条命令定位到 RPC/DB/内部逻辑？</li>
+<li><code>thread -n 3</code>、<code>thread -b</code> 各自解决什么问题？</li>
+<li>为什么”用完 <code>reset</code> 还原增强”是生产规范？</li>
+</ol>
+<hr>
+<blockquote>
+<p>下一篇预告：可以复习”线上 JVM 功能案例汇总” 或 “Spring 循环依赖”（Day5）。先把今天 <code>watch</code>/<code>trace</code>/<code>thread</code> 这三个命令刻进肌肉记忆。</p>
+</blockquote>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day4：Arthas 在线诊断与排障实战</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-09-17 17:31:28</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-09-17 17:31:28
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/09/17/复习知识点Day4-Arthas-在线诊断与排障实战/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
 </div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Java/">#Java</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">#复习知识点</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Arthas/">#Arthas</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E6%8E%92%E9%9A%9C/">#排障</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%AE%9E%E8%B7%B5/">#实践</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/09/16/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day3-JVM-%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E8%B0%83%E4%BC%98%E4%B8%8E%E7%BA%BF%E4%B8%8A%E6%8E%92%E6%9F%A5/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day3：JVM 垃圾回收调优与线上排查</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
 
 	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day4：Arthas 在线诊断与排障实战</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Arthas-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-text">1. Arthas 是什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%AE%89%E8%A3%85%E4%B8%8E%E5%90%AF%E5%8A%A8%EF%BC%8830-%E7%A7%92%E4%B8%8A%E6%89%8B%EF%BC%89"><span class="nav-text">2. 安装与启动（30 秒上手）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E6%A0%B8%E5%BF%83%E5%91%BD%E4%BB%A4%E9%80%9F%E6%9F%A5%EF%BC%88%E8%83%8C%E7%86%9F%E8%BF%99-10-%E4%B8%AA%EF%BC%89"><span class="nav-text">3. 核心命令速查（背熟这 10 个）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E4%BD%BF%E7%94%A8%E6%8A%80%E5%B7%A7%EF%BC%88%E5%AE%9E%E6%88%98%E7%B2%BE%E5%8D%8E%EF%BC%89"><span class="nav-text">4. 使用技巧（实战精华）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%85%88%E2%80%9D%E8%AF%BB%E2%80%9D%E5%90%8E%E2%80%9D%E5%86%99%E2%80%9D%EF%BC%8C%E5%AE%89%E5%85%A8%E6%8E%92%E9%9A%9C"><span class="nav-text">4.1 先”读”后”写”，安全排障</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-watch-%E7%9A%84%E5%A8%81%E5%8A%9B%EF%BC%88%E6%9C%80%E5%B8%B8%E7%94%A8%EF%BC%89"><span class="nav-text">4.2 watch 的威力（最常用）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-trace-%E5%AE%9A%E4%BD%8D%E2%80%9D%E6%85%A2%E5%9C%A8%E5%93%AA%E2%80%9D"><span class="nav-text">4.3 trace 定位”慢在哪”</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E5%8A%A8%E6%80%81%E6%8E%92%E9%9A%9C%E4%B8%89%E6%9D%BF%E6%96%A7"><span class="nav-text">4.4 动态排障三板斧</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E6%8E%92%E6%9F%A5%E9%97%AE%E9%A2%98%E6%96%B9%E5%BC%8F%EF%BC%88%E5%9C%BA%E6%99%AF%E5%AE%9E%E6%88%98%EF%BC%89"><span class="nav-text">5. 排查问题方式（场景实战）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E7%BA%BF%E4%B8%8A%E6%8E%A5%E5%8F%A3%E6%85%A2"><span class="nav-text">5.1 线上接口慢</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E7%BA%BF%E4%B8%8A-CPU-%E9%A3%99%E9%AB%98"><span class="nav-text">5.2 线上 CPU 飙高</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E5%86%85%E5%AD%98-%E5%A0%86%E9%97%AE%E9%A2%98%EF%BC%88%E6%B3%84%E6%BC%8F%E3%80%81%E5%A4%A7%E5%AF%B9%E8%B1%A1%EF%BC%89"><span class="nav-text">5.3 内存&#x2F;堆问题（泄漏、大对象）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E7%B1%BB%E7%89%88%E6%9C%AC%E4%B8%8D%E5%AF%B9-%E6%96%B9%E6%B3%95%E6%89%BE%E4%B8%8D%E5%88%B0"><span class="nav-text">5.4 类版本不对 &#x2F; 方法找不到</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-5-%E8%B0%83%E6%97%A5%E5%BF%97%E4%B8%8D%E9%87%8D%E5%90%AF"><span class="nav-text">5.5 调日志不重启</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%88%E8%83%8C%E8%BF%99%E7%BB%84%EF%BC%89"><span class="nav-text">6. 常见面试题（背这组）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E8%87%AA%E6%B5%8B%E4%B8%89%E9%97%AE"><span class="nav-text">7. 自测三问</span></a></li></ol>
 
-	<div class="page-template-content markdown-body">
-		
-
-		
-	</div>
-
-	<div class="page-template-comments">
-		
 	</div>
 </div>
-
-<div class="paginator">
-	<span class="page-number current">1</span>
+	</div>
+	
 </div>
-  
+
 			</div>
 
 			
@@ -541,6 +972,26 @@
 		</div>
 	</div>
 
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
 	
 
 	<div class="right-side-tools-container">
@@ -665,6 +1116,7 @@
         }),
     );
 </script>
+
 
 
 

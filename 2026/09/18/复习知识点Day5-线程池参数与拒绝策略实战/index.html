@@ -78,7 +78,7 @@
     
     <!--- Seo Part-->
     
-    <link rel="canonical" href="https://percyjie.github.io/tags/慢查询/"/>
+    <link rel="canonical" href="https://percyjie.github.io/2026/09/18/复习知识点day5-线程池参数与拒绝策略实战/"/>
     <meta name="robots" content="index,follow">
     <meta name="googlebot" content="index,follow">
     <meta name="revisit-after" content="1 days">
@@ -86,15 +86,21 @@
     
         
         <meta name="description" content="人没有梦想，和咸鱼有什么分别">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Percy&#39;s Note">
-<meta property="og:url" content="https://percyjie.github.io/tags/%E6%85%A2%E6%9F%A5%E8%AF%A2/index.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day5：线程池参数与拒绝策略实战">
+<meta property="og:url" content="https://percyjie.github.io/2026/09/18/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day5-%E7%BA%BF%E7%A8%8B%E6%B1%A0%E5%8F%82%E6%95%B0%E4%B8%8E%E6%8B%92%E7%BB%9D%E7%AD%96%E7%95%A5%E5%AE%9E%E6%88%98/index.html">
 <meta property="og:site_name" content="Percy&#39;s Note">
 <meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-09-18T14:12:53.000Z">
+<meta property="article:modified_time" content="2026-09-18T14:12:53.000Z">
 <meta property="article:author" content="Percy jie">
-<meta property="article:tag" content="AI, Java, Security, Blog">
+<meta property="article:tag" content="Java">
+<meta property="article:tag" content="复习知识点">
+<meta property="article:tag" content="并发">
+<meta property="article:tag" content="线程池">
+<meta property="article:tag" content="面试">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
     
@@ -108,7 +114,7 @@
     
     <title>
         
-            标签: 慢查询 | Percy&#39;s Note
+            复习知识点Day5：线程池参数与拒绝策略实战 | Percy&#39;s Note
         
     </title>
 
@@ -261,7 +267,7 @@
 
                             <li class="navbar-item">
                                 <!-- Menu -->
-                                <a class="active"
+                                <a class=""
                                    href="/tags"
                                         >
                                     <i class="fa-regular fa-tags fa-fw"></i>
@@ -355,7 +361,7 @@
 
                     <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
                         
-                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full active"
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
                            href="/tags"
                         >
                             <span>
@@ -407,58 +413,534 @@
 			
 
 			<div class="main-content">
-				<div class="page-template-container">
-	
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
 
-	
-	<div class="tag-name">
-    <i class="fa-solid fa-tag"></i>&nbsp;慢查询
-</div>
-<div class="tag-post-list">
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day5：线程池参数与拒绝策略实战</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv2</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-09-18 22:12:53</span>
+        <span class="mobile">2026-09-18 22:12:53</span>
+        <span class="hover-info">创建</span>
+    </span>
     
-<div class="archive-list-container">
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-09-18 22:12:53</span>
+            <span class="mobile">2026-09-18 22:12:53</span>
+            <span class="hover-info">更新</span>
+        </span>
     
-        <section class="archive-item mb-spacing-unit last:mb-0">
-            <div class="archive-item-header flex flex-row items-center mb-2">
-                <span class="archive-year font-semibold text-3xl mr-2">2026</span>
-                <span class="archive-year-post-count text-xs md:text-sm font-bold rounded-small bg-third-background-color py-[2px] px-[10px] border border-border-color">1</span>
-            </div>
-            
-            <ul class="article-list pl-0 md:pl-8 text-lg leading-[1.5]">
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
                 
                     
+                        
+                        <li>
+                            <a href="/categories/Java/">Java</a>&nbsp;
+                        </li>
                     
-                         <!-- Close the previous LI if not the first item -->
-                        <li class="article-item space-y-2 px-6 pt-10 pb-2 text-xl relative border-l-2 border-border-color" date-is='09-10'>
-                    
-                    <a href="/2026/09/10/mysql-%E5%A4%8D%E4%B9%A0-%E7%B4%A2%E5%BC%95%E4%B8%8E%E6%85%A2%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/" class="block w-fit">
-                        <span class="article-title my-0.5 text-2xl">MySQL 复习：索引与慢查询优化（从 EXPLAIN 到索引失效）</span>
-                    </a>
                     
                 
-                </li> <!-- Ensure the last item is properly closed -->
             </ul>
-        </section>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/Java/">Java</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">复习知识点</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E7%BA%BF%E7%A8%8B%E6%B1%A0/">线程池</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%B9%B6%E5%8F%91/">并发</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>2k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>7 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
     
 </div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天：<strong>线程池 = 「核心线程 + 任务队列 + 非核心线程 + 拒绝策略」的调度器</strong>。面试抓三条主线：① 七大参数（core / max / 存活时间 / 队列 / 线程工厂 / 拒绝策略）；② 任务提交流程（先核心线程 → 再入队 → <strong>队列满才扩容</strong> → 全满拒绝）；③ Executors 四种内置池的区别与坑（无界队列 / 无上限线程数，生产建议手写 <code>ThreadPoolExecutor</code> + 有界队列）。</p>
+</blockquote>
+<h2 id="1-线程池是什么，为什么离不开它"><a href="#1-线程池是什么，为什么离不开它" class="headerlink" title="1. 线程池是什么，为什么离不开它"></a>1. 线程池是什么，为什么离不开它</h2><ul>
+<li><strong>线程是稀缺资源</strong>：每次 <code>new Thread</code> 都有创建开销（内核线程 + 栈内存），并发一高，上下文切换和内存都会被拖垮，甚至 OOM。</li>
+<li><strong>线程池 = 一组可复用的线程 + 一个任务队列 + 一套调度规则</strong>：任务来了不用反复创建线程，而是交给已有线程按流程接单。</li>
+<li>三大价值：<strong>复用线程（省创建/销毁）、限制并发（防止打爆机器）、统一管理（排队、超时、拒绝、监控、优雅关闭）</strong>。</li>
+</ul>
+<blockquote>
+<p>一句话面试开场：”线程池把『提交任务』和『执行线程』解耦，用一组复用线程干活，通过 核心线程数 + 队列 + 最大线程数 控制并发上限。”</p>
+</blockquote>
+<h2 id="2-ThreadPoolExecutor-七大参数（背熟这张表）"><a href="#2-ThreadPoolExecutor-七大参数（背熟这张表）" class="headerlink" title="2. ThreadPoolExecutor 七大参数（背熟这张表）"></a>2. ThreadPoolExecutor 七大参数（背熟这张表）</h2><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>corePoolSize</code> 核心线程数</td>
+<td>平时保留、优先创建执行的线程数</td>
+<td><code>8</code></td>
+</tr>
+<tr>
+<td><code>maximumPoolSize</code> 最大线程数</td>
+<td>队列满后最多能扩容到的线程数</td>
+<td><code>16</code></td>
+</tr>
+<tr>
+<td><code>keepAliveTime</code> + <code>unit</code></td>
+<td>非核心线程空闲多久被回收</td>
+<td><code>60, TimeUnit.SECONDS</code></td>
+</tr>
+<tr>
+<td><code>workQueue</code> 工作队列</td>
+<td>任务排队容器（建议有界）</td>
+<td><code>new ArrayBlockingQueue&lt;&gt;(64)</code></td>
+</tr>
+<tr>
+<td><code>threadFactory</code> 线程工厂</td>
+<td>创建线程的工厂，可设线程名/守护</td>
+<td>命名 <code>order-pool-%d</code></td>
+</tr>
+<tr>
+<td><code>handler</code> 拒绝策略</td>
+<td>队列满且线程满时怎么兜底</td>
+<td><code>CallerRunsPolicy</code></td>
+</tr>
+</tbody></table>
+<p>实际上 ThreadPoolExecutor 构造器里 <strong>7 个参数</strong>（核心数、最大数、存活时间、时间单位、队列、工厂、拒绝策略），面试把这张表列全就够用。</p>
+<h3 id="任务提交完整流程（必背）"><a href="#任务提交完整流程（必背）" class="headerlink" title="任务提交完整流程（必背）"></a>任务提交完整流程（必背）</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">提交任务</span><br><span class="line">  ├─ 当前线程数 &lt; corePoolSize ──是──→ 新建核心线程执行</span><br><span class="line">  ├─ 否 → 尝试放入 workQueue</span><br><span class="line">  │      ├─ 队列没满 ──────────────→ 入队等待（此时不新建线程！）</span><br><span class="line">  │      └─ 队列满，且线程数 &lt; maximumPoolSize ──→ 新建非核心线程执行</span><br><span class="line">  └─ 队列满 且 线程数 = maximumPoolSize ─────────→ 触发拒绝策略 handler</span><br></pre></td></tr></table></figure></div>
+
+<p><strong>三个反直觉的细节（面试最爱挖坑）：</strong></p>
+<ol>
+<li><strong>先入队，后扩容</strong>：只要队列没满，即使线程数是 core，也不会新建 max 线程——很多新手以为”任务多就直接扩到 max”，错。</li>
+<li><strong>核心线程默认不回收</strong>：<code>keepAliveTime</code> 只对非核心线程生效；想让核心线程也闲时回收要开 <code>allowCoreThreadTimeOut(true)</code>。</li>
+<li><strong>FixedThreadPool 的 max 形同虚设</strong>：core = max，队列一满就直接走拒绝策略，永远轮不到”扩容”环节。</li>
+</ol>
+<h2 id="3-四种拒绝策略（面试必考）"><a href="#3-四种拒绝策略（面试必考）" class="headerlink" title="3. 四种拒绝策略（面试必考）"></a>3. 四种拒绝策略（面试必考）</h2><table>
+<thead>
+<tr>
+<th>策略</th>
+<th>行为</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>AbortPolicy</code>（默认）</td>
+<td>抛 <code>RejectedExecutionException</code></td>
+<td>想立刻暴露问题、不丢任务</td>
+</tr>
+<tr>
+<td><code>CallerRunsPolicy</code></td>
+<td><strong>让提交任务的调用线程</strong>自己执行该任务</td>
+<td>慢任务天然背压、绝不能丢数据</td>
+</tr>
+<tr>
+<td><code>DiscardPolicy</code></td>
+<td>静默丢弃新任务</td>
+<td>可容忍丢弃的次要数据/日志</td>
+</tr>
+<tr>
+<td><code>DiscardOldestPolicy</code></td>
+<td>丢弃队列中最旧的等待任务，再重试新任务</td>
+<td>实时性要求高、旧任务已过期</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>生产推荐 <strong>自定义 <code>handler</code></strong>：记录拒绝次数 + 告警 + 把任务塞回 MQ/落库重试，而不是用默认 <code>AbortPolicy</code> 在高峰直接抛异常把调用方打挂。<code>CallerRunsPolicy</code> 虽然”不丢数据”，但会把任务压力反压给提交方线程，要评估提交方能不能扛。</p>
+</blockquote>
+<h2 id="4-Executors-内置四种线程池区别（高频对比表）"><a href="#4-Executors-内置四种线程池区别（高频对比表）" class="headerlink" title="4. Executors 内置四种线程池区别（高频对比表）"></a>4. Executors 内置四种线程池区别（高频对比表）</h2><table>
+<thead>
+<tr>
+<th>线程池</th>
+<th>核心线程</th>
+<th>最大线程</th>
+<th>队列</th>
+<th>特点</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>newFixedThreadPool(n)</code></td>
+<td>n</td>
+<td>n</td>
+<td><code>LinkedBlockingQueue</code>（无界）</td>
+<td>固定 n 个线程，排队执行</td>
+<td>任务无限制进入 → <strong>队列积压 OOM</strong></td>
+</tr>
+<tr>
+<td><code>newCachedThreadPool()</code></td>
+<td>0</td>
+<td>很大（<code>Integer.MAX</code>）</td>
+<td><code>SynchronousQueue</code>（不存任务）</td>
+<td>来任务即来即用，空 60s 回收</td>
+<td>峰值任务多个 → <strong>线程爆炸 OOM</strong></td>
+</tr>
+<tr>
+<td><code>newSingleThreadExecutor()</code></td>
+<td>1</td>
+<td>1</td>
+<td>无界队列</td>
+<td>单线程顺序执行</td>
+<td>同无界队列积压 OOM</td>
+</tr>
+<tr>
+<td><code>newScheduledThreadPool(n)</code></td>
+<td>n</td>
+<td>n</td>
+<td><code>DelayedWorkQueue</code>（无界延迟队列）</td>
+<td>定时/周期任务</td>
+<td>延迟队列同样无界，周期任务异常吞掉</td>
+</tr>
+</tbody></table>
+<p><strong>一句话总结</strong>：Fixed/Single 的问题是”无界队列任务积压”，Cached 的问题是”无上限线程”，Scheduled 是无界延迟队列——<strong>生产都不建议直接用 Executors</strong>。<br>官方文档也强调：更推荐用 <code>ThreadPoolExecutor</code> 手动指定有界队列、明确拒绝策略、自定义线程名（不然线上 <code>jstack</code>/Arthas 看线程全是 <code>pool-1-thread-1</code>，不知道是哪业务）。</p>
+<h2 id="5-线程数怎么定-生产配置模板"><a href="#5-线程数怎么定-生产配置模板" class="headerlink" title="5. 线程数怎么定 + 生产配置模板"></a>5. 线程数怎么定 + 生产配置模板</h2><p><strong>估算口诀：</strong></p>
+<ul>
+<li><strong>CPU 密集型</strong>（大量计算/循环）：<code>core ≈ CPU核数 + 1</code>。</li>
+<li><strong>IO 密集型</strong>（大量 DB/RPC/网络等待）：<code>core ≈ CPU核数 × 2</code> 或更准 <code>N × (1 + W/C)</code>（W=等待时间，C=计算时间）。</li>
+<li>无论哪类核心：<strong>队列必须有界</strong>（如 64~2000），否则拒绝策略形同虚设。</li>
+</ul>
+<p><strong>拿来即用的模板：</strong></p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">ThreadPoolExecutor</span> <span class="variable">orderPool</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ThreadPoolExecutor</span>(</span><br><span class="line">        <span class="number">8</span>,                                 <span class="comment">// 核心线程</span></span><br><span class="line">        <span class="number">16</span>,                                <span class="comment">// 最大线程</span></span><br><span class="line">        <span class="number">60L</span>, TimeUnit.SECONDS,             <span class="comment">// 非核心线程空闲 60s 回收</span></span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">ArrayBlockingQueue</span>&lt;&gt;(<span class="number">64</span>),      <span class="comment">// 有界队列，防积压 OOM</span></span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">ThreadFactoryBuilder</span>()</span><br><span class="line">            .setNameFormat(<span class="string">&quot;order-pool-%d&quot;</span>) <span class="comment">// 命名，线上查得到</span></span><br><span class="line">            .build(),</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">ThreadPoolExecutor</span>.CallerRunsPolicy() <span class="comment">// 背压兜底</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li><code>ThreadFactoryBuilder</code> 来自 Guava；不引 Guava 就自写一个 <code>ThreadFactory</code> 设置 <code>name</code>。</li>
+<li>可以覆写 <code>beforeExecute</code> / <code>afterExecute</code> 钩子埋点（耗时、成功/失败、异常）。</li>
+<li>提交量大时先看 <code>orderPool.getQueue().size()</code> / <code>getActiveCount()</code> 判断积压，再决定是否扩容。</li>
+</ul>
+<h2 id="6-使用注意点与线上排查"><a href="#6-使用注意点与线上排查" class="headerlink" title="6. 使用注意点与线上排查"></a>6. 使用注意点与线上排查</h2><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>execute</code> vs <code>submit</code></td>
+<td><code>execute</code> 异常由线程池异常处理器兜住；<code>submit</code> 异常包进 <code>Future</code>，<strong>不 <code>get()</code> 就永远”没动静”</strong>，很多”任务丢了”的真相就是 submit 后没人 get</td>
+</tr>
+<tr>
+<td>优雅关闭</td>
+<td><code>shutdown()</code> → <code>awaitTermination()</code> 等待 → 超时再 <code>shutdownNow()</code> 打断</td>
+</tr>
+<tr>
+<td>监控指标</td>
+<td><code>getQueue().size()</code>（积压）、<code>getActiveCount()</code>（活跃）、<code>getLargestPoolSize()</code>（历史峰值）、<code>getCompletedTaskCount()</code>（累计完成）</td>
+</tr>
+<tr>
+<td>拒绝告警</td>
+<td>自定义 handler 里计数 + 告警，别让拒绝发生在静默里</td>
+</tr>
+<tr>
+<td>动态调参</td>
+<td><code>setCorePoolSize</code> / <code>setMaximumPoolSize</code> / <code>setRejectedExecutionHandler</code> 都可在运行期改，应对流量突增</td>
+</tr>
+<tr>
+<td>线上坑</td>
+<td>接口变慢 + 活跃线程持续 = max → 多半是下游 DB/RPC 慢或任务卡死；堆里对象暴涨 → 先怀疑队列里的任务对象</td>
+</tr>
+</tbody></table>
+<h2 id="7-常见面试题（背这组）"><a href="#7-常见面试题（背这组）" class="headerlink" title="7. 常见面试题（背这组）"></a>7. 常见面试题（背这组）</h2><table>
+<thead>
+<tr>
+<th>面试题</th>
+<th>一句话要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>线程池有哪些参数？</td>
+<td>7 个：core / max / keepAlive+unit / queue / threadFactory / handler</td>
+</tr>
+<tr>
+<td>提交任务执行流程？</td>
+<td>先核心线程 → 再尝试入队 → 队列满才扩到 max → 全满才拒绝</td>
+</tr>
+<tr>
+<td>四种拒绝策略？</td>
+<td>Abort(抛异常) / CallerRuns(调用者线程跑) / Discard(丢新) / DiscardOldest(丢最旧)</td>
+</tr>
+<tr>
+<td>Fixed 和 Cached 区别？</td>
+<td>线程数固定 &amp; 无界队列 vs 线程数无上限 &amp; 不存任务</td>
+</tr>
+<tr>
+<td>为什么生产不用 Executors？</td>
+<td>无界队列 / 无上限线程 → OOM，且线程不可见，推荐手写 ThreadPoolExecutor</td>
+</tr>
+<tr>
+<td>核心线程能回收吗？</td>
+<td>默认不能，<code>allowCoreThreadTimeOut(true)</code> 才行</td>
+</tr>
+<tr>
+<td>CPU/IO 密集线程数？</td>
+<td>CPU 密集 N+1，IO 密集 2N 或 N×(1+W（等待）/C（计算）)</td>
+</tr>
+<tr>
+<td>队列为什么要有限？</td>
+<td>防止任务积压无限吃内存，配拒绝策略做兜底</td>
+</tr>
+<tr>
+<td>execute vs submit？</td>
+<td>submit 返回 Future 并吞异常，必须 <code>get()</code> 才能看到</td>
+</tr>
+<tr>
+<td>线程池排满怎么办？</td>
+<td>动态提升 core/max、换有界队列、自定义拒绝（告警+重投），最后还是冲掉调用方</td>
+</tr>
+<tr>
+<td>怎么优雅关闭？</td>
+<td><code>shutdown</code> → <code>awaitTermination</code> → 超时 <code>shutdownNow</code> 兜底</td>
+</tr>
+</tbody></table>
+<h2 id="8-自测三问"><a href="#8-自测三问" class="headerlink" title="8. 自测三问"></a>8. 自测三问</h2><ol>
+<li>任务提交时队列没满、线程数等于 core，会新建线程还是入队等待？<strong>根本原因</strong>是什么？</li>
+<li><code>CallerRunsPolicy</code> 真能无条件”不丢任务”吗？它把任务扔给谁，副作用是什么？</li>
+<li>一个 <code>FixedThreadPool</code> 线上突然 OOM，第一反应应该查任务队列还是线程数？哪条命令验证？</li>
+</ol>
+<hr>
+<blockquote>
+<p>下一篇预告：可以写「限流与熔断降级」或「MySQL 事务与锁」（Day6）。先把线程池”参数 → 流程 → 拒绝 → Executors 区别”这四段背熟，面试占比很高。</p>
+</blockquote>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day5：线程池参数与拒绝策略实战</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-09-18 22:12:53</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-09-18 22:12:53
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/09/18/复习知识点Day5-线程池参数与拒绝策略实战/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
 </div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Java/">#Java</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%9D%A2%E8%AF%95/">#面试</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">#复习知识点</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E7%BA%BF%E7%A8%8B%E6%B1%A0/">#线程池</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%B9%B6%E5%8F%91/">#并发</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/09/17/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day4-Arthas-%E5%9C%A8%E7%BA%BF%E8%AF%8A%E6%96%AD%E4%B8%8E%E6%8E%92%E9%9A%9C%E5%AE%9E%E6%88%98/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day4：Arthas 在线诊断与排障实战</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
 	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day5：线程池参数与拒绝策略实战</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E7%BA%BF%E7%A8%8B%E6%B1%A0%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%8C%E4%B8%BA%E4%BB%80%E4%B9%88%E7%A6%BB%E4%B8%8D%E5%BC%80%E5%AE%83"><span class="nav-text">1. 线程池是什么，为什么离不开它</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-ThreadPoolExecutor-%E4%B8%83%E5%A4%A7%E5%8F%82%E6%95%B0%EF%BC%88%E8%83%8C%E7%86%9F%E8%BF%99%E5%BC%A0%E8%A1%A8%EF%BC%89"><span class="nav-text">2. ThreadPoolExecutor 七大参数（背熟这张表）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1%E6%8F%90%E4%BA%A4%E5%AE%8C%E6%95%B4%E6%B5%81%E7%A8%8B%EF%BC%88%E5%BF%85%E8%83%8C%EF%BC%89"><span class="nav-text">任务提交完整流程（必背）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%9B%9B%E7%A7%8D%E6%8B%92%E7%BB%9D%E7%AD%96%E7%95%A5%EF%BC%88%E9%9D%A2%E8%AF%95%E5%BF%85%E8%80%83%EF%BC%89"><span class="nav-text">3. 四种拒绝策略（面试必考）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Executors-%E5%86%85%E7%BD%AE%E5%9B%9B%E7%A7%8D%E7%BA%BF%E7%A8%8B%E6%B1%A0%E5%8C%BA%E5%88%AB%EF%BC%88%E9%AB%98%E9%A2%91%E5%AF%B9%E6%AF%94%E8%A1%A8%EF%BC%89"><span class="nav-text">4. Executors 内置四种线程池区别（高频对比表）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E7%BA%BF%E7%A8%8B%E6%95%B0%E6%80%8E%E4%B9%88%E5%AE%9A-%E7%94%9F%E4%BA%A7%E9%85%8D%E7%BD%AE%E6%A8%A1%E6%9D%BF"><span class="nav-text">5. 线程数怎么定 + 生产配置模板</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E4%BD%BF%E7%94%A8%E6%B3%A8%E6%84%8F%E7%82%B9%E4%B8%8E%E7%BA%BF%E4%B8%8A%E6%8E%92%E6%9F%A5"><span class="nav-text">6. 使用注意点与线上排查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%88%E8%83%8C%E8%BF%99%E7%BB%84%EF%BC%89"><span class="nav-text">7. 常见面试题（背这组）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E8%87%AA%E6%B5%8B%E4%B8%89%E9%97%AE"><span class="nav-text">8. 自测三问</span></a></li></ol>
 
-	<div class="page-template-content markdown-body">
-		
-
-		
-	</div>
-
-	<div class="page-template-comments">
-		
 	</div>
 </div>
-
-<div class="paginator">
-	<span class="page-number current">1</span>
+	</div>
+	
 </div>
-  
+
 			</div>
 
 			
@@ -540,6 +1022,26 @@
 		</div>
 	</div>
 
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
 	
 
 	<div class="right-side-tools-container">
@@ -664,6 +1166,7 @@
         }),
     );
 </script>
+
 
 
 

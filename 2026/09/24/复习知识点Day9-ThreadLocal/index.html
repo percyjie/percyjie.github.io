@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="AI, Java, Security, Blog">
+    
+    
+    <meta name="author" content="Percy jie">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://percyjie.github.io/2026/09/24/复习知识点day9-threadlocal/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day9：ThreadLocal">
+<meta property="og:url" content="https://percyjie.github.io/2026/09/24/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day9-ThreadLocal/index.html">
+<meta property="og:site_name" content="Percy&#39;s Note">
+<meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-09-24T07:44:45.000Z">
+<meta property="article:modified_time" content="2026-09-24T07:44:45.000Z">
+<meta property="article:author" content="Percy jie">
+<meta property="article:tag" content="ThreadLocal">
+<meta property="article:tag" content="内存泄漏">
+<meta property="article:tag" content="异步">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            复习知识点Day9：ThreadLocal | Percy&#39;s Note
+        
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"percyjie.github.io","root":"/","language":"zh-CN"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"vs2015"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/redefine-og.webp","description":"人没有梦想，和咸鱼有什么分别"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Percy's Note","subtitle":{"text":["人没有梦想，和咸鱼有什么分别"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"default","links":[{"icon":"fa-brands fa-github","url":"https://github.com/percyjie"},{"icon":"fa-brands fa-weibo","url":"https://weibo.com/panjie0709"},{"icon":null,"url":null},{"icon":null,"url":null},{"icon":null,"url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"cloud","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":{"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}}},"article_date_format":"auto","excerpt_length":200,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart fa-beat\" style=\"--fa-animation-duration: 0.5s; color: #f54545\"></i>","start":"2017/03/08 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2017/03/08 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                Percy&#39;s Note
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/tags"
+                                        >
+                                    <i class="fa-regular fa-tags fa-fw"></i>
+                                    标签
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/tags"
+                        >
+                            <span>
+                                标签
+                            </span>
+                            
+                                <i class="fa-regular fa-tags fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">60</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">8</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">19</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+
+			<div class="main-content">
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
+
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day9：ThreadLocal</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv3</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-09-24 15:44:45</span>
+        <span class="mobile">2026-09-24 15:44:45</span>
+        <span class="hover-info">创建</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-09-24 15:44:45</span>
+            <span class="mobile">2026-09-24 15:44:45</span>
+            <span class="hover-info">更新</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Java/">Java</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/ThreadLocal/">ThreadLocal</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F/">内存泄漏</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%BC%82%E6%AD%A5/">异步</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>3k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>12 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天：<strong>ThreadLocal = 「线程私有的上下文储物柜」</strong>。复习抓三条主线：① 结构（<code>Thread → ThreadLocalMap → Entry</code>，<strong>key 是弱引用的 ThreadLocal、value 是强引用的对象</strong>）；② 内存泄漏（key 被回收后 value 没人清理，线程池场景必须 <code>remove</code>）；③ 异步获取（默认拿不到 → <code>InheritableThreadLocal</code> 只对 <code>new Thread</code> 拷贝一次 → 线程池要用 TTL/显式传参）。</p>
+</blockquote>
+<h2 id="1-ThreadLocal-是什么：先-5-分钟找回记忆"><a href="#1-ThreadLocal-是什么：先-5-分钟找回记忆" class="headerlink" title="1. ThreadLocal 是什么：先 5 分钟找回记忆"></a>1. ThreadLocal 是什么：先 5 分钟找回记忆</h2><ul>
+<li><strong>作用</strong>：给”同一个线程”开辟一块私有变量空间，线程内随便读写，线程之间互不可见。</li>
+<li><strong>本质</strong>：不是把值复制给每个线程，而是<strong>每个 <code>Thread</code> 自己持有</strong>一个 <code>ThreadLocalMap</code>，<code>ThreadLocal</code> 对象只是这个 map 的 <strong>key</strong>（第二节细讲）。</li>
+<li>典型使用场景：<ol>
+<li>每个请求/线程的独立上下文（登录用户、requestId、traceId、MDC 日志）；</li>
+<li>Spring 事务：<code>DataSourceTransactionManager</code> 把连接按线程存起来，保证一个事务内永远拿到<strong>同一个连接</strong>；</li>
+<li><code>SimpleDateFormat</code> 等非线程安全对象的”每线程一份”；</li>
+<li>避免层层方法传参（context 透传）。</li>
+</ol>
+</li>
+</ul>
+<p>基础 Demo：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ThreadLocalDemo</span> &#123;</span><br><span class="line">    <span class="comment">// 用一个静态变量当&quot;储物箱钥匙&quot;</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> ThreadLocal&lt;String&gt; USER = <span class="keyword">new</span> <span class="title class_">ThreadLocal</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">        <span class="type">Thread</span> <span class="variable">t1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; &#123; USER.set(<span class="string">&quot;user-1&quot;</span>); echo(); &#125;);</span><br><span class="line">        <span class="type">Thread</span> <span class="variable">t2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; &#123; USER.set(<span class="string">&quot;user-2&quot;</span>); echo(); &#125;);</span><br><span class="line">        t1.start(); t2.start();</span><br><span class="line">        t1.join(); t2.join();</span><br><span class="line">        <span class="comment">// 主线程没 set 过 → null</span></span><br><span class="line">        System.out.println(<span class="string">&quot;main: &quot;</span> + USER.get());  <span class="comment">// main: null</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">echo</span><span class="params">()</span> &#123;</span><br><span class="line">        System.out.println(Thread.currentThread().getName() + <span class="string">&quot;: &quot;</span> + USER.get());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p>反直觉点：<strong>变量声明是静态/全局的，但”值”属于每个线程</strong>——这就是面试最爱挖的第一个点。</p>
+</blockquote>
+<h2 id="2-Key-Value-引用设计（重点一：看源码）"><a href="#2-Key-Value-引用设计（重点一：看源码）" class="headerlink" title="2. Key-Value 引用设计（重点一：看源码）"></a>2. Key-Value 引用设计（重点一：看源码）</h2><h3 id="2-1-Thread-→-ThreadLocalMap-→-Entry-的持有链"><a href="#2-1-Thread-→-ThreadLocalMap-→-Entry-的持有链" class="headerlink" title="2.1 Thread → ThreadLocalMap → Entry 的持有链"></a>2.1 Thread → ThreadLocalMap → Entry 的持有链</h3><ul>
+<li>每个 <code>Thread</code> 实例自带两个 map 字段（默认为 null，用到才建）：</li>
+</ul>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// JDK Thread.java</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Thread</span> &#123;</span><br><span class="line">    ThreadLocal.<span class="type">ThreadLocalMap</span> <span class="variable">threadLocals</span> <span class="operator">=</span> <span class="literal">null</span>;            <span class="comment">// 本线程的 ThreadLocal 值</span></span><br><span class="line">    ThreadLocal.<span class="type">ThreadLocalMap</span> <span class="variable">inheritableThreadLocals</span> <span class="operator">=</span> <span class="literal">null</span>; <span class="comment">// 子线程继承用</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li><code>ThreadLocalMap</code> 不是 <code>HashMap</code>，而是一个<strong>只服务于 ThreadLocal 的专用 hash 表</strong>（开放寻址 + 线性探测），默认容量 16、阈值 2/3：</li>
+</ul>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// ThreadLocalMap 的数组元素：Entry</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">class</span> <span class="title class_">Entry</span> <span class="keyword">extends</span> <span class="title class_">WeakReference</span>&lt;ThreadLocal&lt;?&gt;&gt; &#123;</span><br><span class="line">    Object value;                    <span class="comment">// 强引用 value</span></span><br><span class="line">    Entry(ThreadLocal&lt;?&gt; k, Object v) &#123;</span><br><span class="line">        <span class="built_in">super</span>(k);                    <span class="comment">// key 走 WeakReference&lt;ThreadLocal&gt;</span></span><br><span class="line">        value = v;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>关键对应关系（背下来）：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>是谁</th>
+<th>引用强度</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Key</td>
+<td>ThreadLocal 实例本身（<strong>不是字符串</strong>）</td>
+<td><strong>弱引用</strong>（继承 <code>WeakReference</code>）</td>
+<td>定位/区分不同的 ThreadLocal</td>
+</tr>
+<tr>
+<td>Value</td>
+<td>线程里存的对象</td>
+<td><strong>强引用</strong></td>
+<td>真正存的值</td>
+</tr>
+<tr>
+<td>Entry</td>
+<td>弱引用子类</td>
+<td>—</td>
+<td>把 key + value 绑在一起放进数组</td>
+</tr>
+</tbody></table>
+<p>引用链图（实线=强引用，虚线=弱引用）：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">Thread 对象（堆）</span><br><span class="line"> └── threadLocals ──强引用──▶ ThreadLocalMap（Entry[]，容量 16）</span><br><span class="line">        ├── Entry[1]：key ──弱引用──▶ ThreadLocal#1（你的 ThreadLocal 实例）</span><br><span class="line">        │            └─ value ──强引用──▶ 用户对象 / 连接 / 上下文</span><br><span class="line">        └── Entry[2]：key ──弱引用──▶ ThreadLocal#2</span><br><span class="line">                     └─ value ──强引用──▶ 另一份值</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="2-2-设计哲学：为什么-key-用弱引用？"><a href="#2-2-设计哲学：为什么-key-用弱引用？" class="headerlink" title="2.2 设计哲学：为什么 key 用弱引用？"></a>2.2 设计哲学：为什么 key 用弱引用？</h3><p>假设 key 用<strong>强引用</strong>：ThreadLocal 对象被业务代码丢弃后（比如局部变量用完），由于 Thread 活着 → ThreadLocalMap 活着 → Entry 强引用 key → ThreadLocal 和它的 value 全被拖住、永远无法回收。</p>
+<p>尤其 Web 容器 + 线程池场景：每处理一个请求 set 一个局部 ThreadLocal，线程不销毁，引用链永远在；<strong>如果 value 还挂着一个 ClassLoader，整块类的元数据都无法卸载</strong>，这就是经典的”热部署/长驻线程 OOM”来源。</p>
+<p>改成<strong>弱引用 key</strong> 后：</p>
+<ul>
+<li>业务代码不再引用 ThreadLocal（外部强引用消失）→ GC 时 key 被回收，<code>Entry.get()</code> 返回 null，该条目立刻能被识别为<strong>过期条目（stale entry）</strong>；</li>
+<li><strong>value 仍然是强引用</strong>，不会被自动回收——这正是内存泄漏（第 3 节）真正的根源；</li>
+<li>于是设计达成：<strong>key 的泄漏被设计消灭了，value 的泄漏留给”访问路径上的清理 + 显式 remove”兜底</strong>。</li>
+</ul>
+<p>一句话面试回答：”Entry 复用 <code>WeakReference</code> 当 key，是为了让 <strong>ThreadLocal 对象本身的存亡只由业务代码决定</strong>；value 保持强引用是为了使用期间不被 GC 抢走，代价是 value 需要手动 remove 兜底。”</p>
+<h3 id="2-3-Hash-定位与开放寻址（了解即可）"><a href="#2-3-Hash-定位与开放寻址（了解即可）" class="headerlink" title="2.3 Hash 定位与开放寻址（了解即可）"></a>2.3 Hash 定位与开放寻址（了解即可）</h3><ul>
+<li>每个 ThreadLocal 创建时分配一个 <code>threadLocalHashCode</code>，步长是魔术数 <code>0x61c88647</code>（黄金分割数），让散列均匀；</li>
+<li>定位：<code>index = hash &amp; (len - 1)</code>，哈希冲突时<strong>线性探测</strong>向后找空位，而不是像 HashMap 一样拉链；</li>
+<li><code>size &gt; 2/3 * len</code> 触发清理 + 扩容（长度仍为 2 次幂）。</li>
+</ul>
+<p>对应最常见的 <code>get()</code>：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> T <span class="title function_">get</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="type">Thread</span> <span class="variable">t</span> <span class="operator">=</span> Thread.currentThread();</span><br><span class="line">    <span class="type">ThreadLocalMap</span> <span class="variable">map</span> <span class="operator">=</span> getMap(t);</span><br><span class="line">    <span class="keyword">if</span> (map != <span class="literal">null</span>) &#123;</span><br><span class="line">        ThreadLocalMap.<span class="type">Entry</span> <span class="variable">e</span> <span class="operator">=</span> map.getEntry(<span class="built_in">this</span>); <span class="comment">// 按 ThreadLocal（key）定位</span></span><br><span class="line">        <span class="keyword">if</span> (e != <span class="literal">null</span>) <span class="keyword">return</span> (T)e.value;            <span class="comment">// 拿到 value（强引用对象）</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> setInitialValue();                      <span class="comment">// 首次访问：放初始值并返回</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="3-内存泄漏（重点二）：到底谁漏了"><a href="#3-内存泄漏（重点二）：到底谁漏了" class="headerlink" title="3. 内存泄漏（重点二）：到底谁漏了"></a>3. 内存泄漏（重点二）：到底谁漏了</h2><h3 id="3-1-泄漏的两个主角"><a href="#3-1-泄漏的两个主角" class="headerlink" title="3.1 泄漏的两个主角"></a>3.1 泄漏的两个主角</h3><table>
+<thead>
+<tr>
+<th>对象</th>
+<th>会不会漏</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>key（ThreadLocal）</td>
+<td>基本不会</td>
+<td>弱引用，外部引用消失即被 GC</td>
+</tr>
+<tr>
+<td><strong>value（set 的值）</strong></td>
+<td><strong>会漏</strong></td>
+<td>Entry 数组强引用 value；只有 Thread 消亡或显式 <code>remove()</code> 才被解除</td>
+</tr>
+</tbody></table>
+<p>泄漏链条（必背）：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">线程池线程常驻（不销毁）</span><br><span class="line">  → 它自己的 threadLocals 一直活着</span><br><span class="line">  → 某个 entry：key 已被 GC（null）</span><br><span class="line">  → 但 value 仍被 entry.value 强引用</span><br><span class="line">  → 这个 value 不可访问、也无法回收 → 内存只增不减（长驻线程 = 缓存）</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="3-2-源码里已有的”自动清理”机制"><a href="#3-2-源码里已有的”自动清理”机制" class="headerlink" title="3.2 源码里已有的”自动清理”机制"></a>3.2 源码里已有的”自动清理”机制</h3><p>JDK 不是完全不管，而是”<strong>用的时候顺手清</strong>“（注意：不是守护线程定时清）：</p>
+<table>
+<thead>
+<tr>
+<th>触发点</th>
+<th>清理动作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>get()</code> 撞到 key 为 null 的过期槽</td>
+<td><code>expungeStaleEntry</code> 清掉该 entry 并做局部整理</td>
+</tr>
+<tr>
+<td><code>set()</code> 撞到过期槽</td>
+<td><code>replaceStaleEntry</code> 替换旧 key 并清理、<code>cleanSomeSlots</code> 顺手清几个</td>
+</tr>
+<tr>
+<td><code>remove()</code></td>
+<td>显式删除（最可靠的清理）</td>
+</tr>
+<tr>
+<td>扩容 / <code>rehash()</code></td>
+<td><code>expungeStaleEntries</code> 全表清理</td>
+</tr>
+</tbody></table>
+<p><strong>关键局限</strong>：这些都是”访问路径上顺手清理”，并<strong>不会主动轮询</strong>。如果线程存活且再也不碰那个 ThreadLocal，过期 entry 就一直堆着——线程池空闲线程就是典型案例。</p>
+<h3 id="3-3-为什么”线程池-不-remove”一定会出问题"><a href="#3-3-为什么”线程池-不-remove”一定会出问题" class="headerlink" title="3.3 为什么”线程池 + 不 remove”一定会出问题"></a>3.3 为什么”线程池 + 不 remove”一定会出问题</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">ExecutorService</span> <span class="variable">pool</span> <span class="operator">=</span> Executors.newFixedThreadPool(<span class="number">4</span>);</span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; <span class="number">100000</span>; i++) &#123;</span><br><span class="line">    <span class="keyword">final</span> <span class="type">int</span> <span class="variable">id</span> <span class="operator">=</span> i;</span><br><span class="line">    pool.execute(() -&gt; &#123;</span><br><span class="line">        <span class="type">TraceContext</span> <span class="variable">ctx</span> <span class="operator">=</span> TraceContext.newTrace(); <span class="comment">// new 一个大对象</span></span><br><span class="line">        ctx.setUserId(id);</span><br><span class="line">        CTX.set(ctx);      <span class="comment">// 存进 ThreadLocal</span></span><br><span class="line">        doBusiness();      <span class="comment">// try/finally 里忘了 remove（最常见）</span></span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li>每次任务都在旧任务：thread 的 map 里留下一个新 <code>ctx</code>（大对象）；</li>
+<li>池里只有 4 个线程 → 槽位不断被新对象顶替又留下，<strong>内存只涨不降</strong>，长期积累 = OOM；</li>
+<li>同时还有<strong>脏值</strong>问题：下一个任务没重新 set 时，<code>get()</code> 会拿到上一个任务留下的值。</li>
+</ul>
+<h3 id="3-4-正确姿势（面试背下来）"><a href="#3-4-正确姿势（面试背下来）" class="headerlink" title="3.4 正确姿势（面试背下来）"></a>3.4 正确姿势（面试背下来）</h3><ol>
+<li><strong>必用 try-finally + remove</strong>：</li>
+</ol>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    CTX.set(ctx);</span><br><span class="line">    doBusiness();</span><br><span class="line">&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    CTX.remove();  <span class="comment">// 清掉 value（key 是弱引用，顺手被 GC 收走）</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<ol start="2">
+<li>只在合适的地方用（请求上下文、连接绑定、事务上下文），<strong>别把大对象/池化的连接</strong>塞进长生命周期线程的 ThreadLocal。</li>
+<li>配合线程池：任务里 remove，或直接上 TTL（第 4 节）让框架自动 restore。</li>
+<li>线上排查：<code>jmap -dump</code> + MAT 看 <code>java.lang.ThreadLocal$ThreadLocalMap</code> 的 retained size。</li>
+</ol>
+<blockquote>
+<p>错误回答：”ThreadLocal 用的是弱引用，所以不会泄漏” ❌<br>正确回答：”key 弱引用防的是 <strong>ThreadLocal 对象自身</strong>的泄漏；value 仍是强引用，<strong>线程池场景必须 remove</strong>，否则 value 泄漏 + 脏值。”</p>
+</blockquote>
+<h2 id="4-异步任务怎么拿到-ThreadLocal（重点三）"><a href="#4-异步任务怎么拿到-ThreadLocal（重点三）" class="headerlink" title="4. 异步任务怎么拿到 ThreadLocal（重点三）"></a>4. 异步任务怎么拿到 ThreadLocal（重点三）</h2><h3 id="4-1-一句话结论"><a href="#4-1-一句话结论" class="headerlink" title="4.1 一句话结论"></a>4.1 一句话结论</h3><p><strong>异步（线程池 / 新线程）默认拿不到提交线程的 ThreadLocal</strong>，手工补传。要传就要靠：显式传参、<code>InheritableThreadLocal</code>（仅 <code>new Thread</code>）、或阿里 TTL。</p>
+<h3 id="4-2-默认拿不到：值绑定在”执行线程”上"><a href="#4-2-默认拿不到：值绑定在”执行线程”上" class="headerlink" title="4.2 默认拿不到：值绑定在”执行线程”上"></a>4.2 默认拿不到：值绑定在”执行线程”上</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line">ThreadLocal&lt;Integer&gt; TL = <span class="keyword">new</span> <span class="title class_">ThreadLocal</span>&lt;&gt;();</span><br><span class="line">TL.set(<span class="number">10</span>);</span><br><span class="line">Executors.newFixedThreadPool(<span class="number">1</span>).execute(() -&gt;</span><br><span class="line">    System.out.println(TL.get())); <span class="comment">// null！池线程里没有这份 map</span></span><br></pre></td></tr></table></figure></div>
+
+<p>因为 <code>ThreadLocal.get()</code> 按 <code>Thread.currentThread()</code> 取 map；Runnable 跑在池线程，自然拿不到提交线程的 map。</p>
+<h3 id="4-3-InheritableThreadLocal：只能”生孩子”，不能”借”"><a href="#4-3-InheritableThreadLocal：只能”生孩子”，不能”借”" class="headerlink" title="4.3 InheritableThreadLocal：只能”生孩子”，不能”借”"></a>4.3 InheritableThreadLocal：只能”生孩子”，不能”借”</h3><p><code>new Thread()</code> 时，父线程的 <code>inheritableThreadLocals</code> 会被 <code>createInheritedMap</code> 拷给子线程：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line">InheritableThreadLocal&lt;String&gt; ITL = <span class="keyword">new</span> <span class="title class_">InheritableThreadLocal</span>&lt;&gt;();</span><br><span class="line">ITL.set(<span class="string">&quot;parent&quot;</span>);</span><br><span class="line"><span class="type">Thread</span> <span class="variable">child</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; System.out.println(ITL.get())); <span class="comment">// parent ✓</span></span><br><span class="line">child.start();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 但线程池创建后再提交任务，并不会重新拷贝：</span></span><br><span class="line"><span class="type">ExecutorService</span> <span class="variable">pool</span> <span class="operator">=</span> Executors.newFixedThreadPool(<span class="number">1</span>);</span><br><span class="line">pool.execute(() -&gt; System.out.println(ITL.get())); <span class="comment">// null 或残留旧值</span></span><br></pre></td></tr></table></figure></div>
+
+<p>也就是说它<strong>只在线程诞生那一刻拷贝一次</strong>：线程池线程已被池创建，第二次提交也不再拷贝 → 线程池场景直接失效，还自带”脏值”风险。</p>
+<h3 id="4-4-线程池-异步传值标准方案：TransmittableThreadLocal（TTL）"><a href="#4-4-线程池-异步传值标准方案：TransmittableThreadLocal（TTL）" class="headerlink" title="4.4 线程池/异步传值标准方案：TransmittableThreadLocal（TTL）"></a>4.4 线程池/异步传值标准方案：TransmittableThreadLocal（TTL）</h3><p>阿里开源的 <strong>TTL</strong> 解决”提交线程 → 执行线程”的值传递：</p>
+<div class="code-container" data-rel="Xml"><figure class="iseeu highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.alibaba<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>transmittable-thread-local<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>2.14.5<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure></div>
+
+<p>方式一：包装任务（不污染线程池）：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line">TransmittableThreadLocal&lt;String&gt; TTL = <span class="keyword">new</span> <span class="title class_">TransmittableThreadLocal</span>&lt;&gt;();</span><br><span class="line">TTL.set(<span class="string">&quot;order-service&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="type">ExecutorService</span> <span class="variable">pool</span> <span class="operator">=</span> Executors.newFixedThreadPool(<span class="number">4</span>);</span><br><span class="line">pool.execute(TtlRunnable.get(() -&gt; &#123;</span><br><span class="line">    System.out.println(TTL.get()); <span class="comment">// order-service ✓</span></span><br><span class="line">&#125;));</span><br><span class="line"><span class="comment">// 或</span></span><br><span class="line">pool.submit(TtlCallable.get(() -&gt; &#123;</span><br><span class="line">    System.out.println(TTL.get());</span><br><span class="line">    <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">&#125;));</span><br></pre></td></tr></table></figure></div>
+
+<p>方式二（包装线程池，全透明）：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">ExecutorService</span> <span class="variable">ttlPool</span> <span class="operator">=</span> TtlExecutors.getTtlExecutorService(pool);</span><br><span class="line">ttlPool.execute(() -&gt; System.out.println(TTL.get())); <span class="comment">// ✓ 一样能取到</span></span><br></pre></td></tr></table></figure></div>
+
+<p>原理（面试点睛）：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">capture(): 提交线程上，把当前所有 TTL 快照出来</span><br><span class="line">replay():  任务执行前，把快照灌回执行线程的 ThreadLocalMap</span><br><span class="line">run():      执行业务</span><br><span class="line">restore(): 执行完优先恢复执行线程原本的值 → 不给下一个任务留脏值</span><br></pre></td></tr></table></figure></div>
+
+<p>所以 TTL 有两个收益：<strong>异步可传值</strong>（与线程创建时机无关）、<strong>任务跑完自动恢复</strong>（顺手解决脏任务/泄漏隐患）。logback MDC、traceId、RPC 上下文都能用 TTL 承载。</p>
+<p>不引依赖的最小实现思路（说得清就给分）：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">ContextRunnable</span> <span class="keyword">implements</span> <span class="title class_">Runnable</span> &#123;</span><br><span class="line">    <span class="keyword">final</span> Map&lt;Object, Object&gt; snapshot; <span class="comment">// 提交线程的快照</span></span><br><span class="line">    <span class="keyword">final</span> Runnable target;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">run</span><span class="params">()</span> &#123;</span><br><span class="line">        replay(snapshot);       <span class="comment">// 回放到执行线程</span></span><br><span class="line">        <span class="keyword">try</span> &#123; target.run(); &#125;</span><br><span class="line">        <span class="keyword">finally</span> &#123; restore(originSnapshot); &#125; <span class="comment">// 跑完恢复原值</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="4-5-不用的常见异步场景速查"><a href="#4-5-不用的常见异步场景速查" class="headerlink" title="4.5 不用的常见异步场景速查"></a>4.5 不用的常见异步场景速查</h3><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>推荐做法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Spring <code>@Async</code> 异步方法</td>
+<td>把需要值写成参数显式传入；或自定义 <code>TaskDecorator</code> 配合 TTL</td>
+</tr>
+<tr>
+<td>日志 MDC 丢 traceId</td>
+<td>任务包装 TTL / <code>TtlRunnable</code> 包一层，或 MDC 配合 TTL 实现</td>
+</tr>
+<tr>
+<td><code>CompletableFuture</code> 链式异步</td>
+<td>每一段异步任务都包 TTL（或显式传参）</td>
+</tr>
+<tr>
+<td>新线程 <code>new Thread</code></td>
+<td><code>InheritableThreadLocal</code> 够用；线程池一律 TTL</td>
+</tr>
+<tr>
+<td>跨线程大量对象共享</td>
+<td>别用 ThreadLocal，用上下文对象显式传参 + <code>ConcurrentHashMap</code> 按 requestId 存</td>
+</tr>
+</tbody></table>
+<h2 id="5-高频面试题速查"><a href="#5-高频面试题速查" class="headerlink" title="5. 高频面试题速查"></a>5. 高频面试题速查</h2><table>
+<thead>
+<tr>
+<th>问题</th>
+<th>一句话答案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ThreadLocal 里 value 放堆还是栈</td>
+<td>堆。<code>ThreadLocal</code>、<code>ThreadLocalMap</code>、value 都是对象</td>
+</tr>
+<tr>
+<td>key 为什么弱引用</td>
+<td>防止 ThreadLocal 对象本身被线程长生命周期拖住回收；value 必须强引用（使用中不能被 GC）</td>
+</tr>
+<tr>
+<td>ThreadLocal 会内存泄漏吗</td>
+<td>会（value）。前提：线程存活 + 不再访问 + 不 remove（线程池最典型）</td>
+</tr>
+<tr>
+<td>线程池里不 remove 为什么会脏</td>
+<td>线程被复用，map 里还留着上一个任务的值，新任务 get 会读到旧值</td>
+</tr>
+<tr>
+<td>InheritableThreadLocal 能解决线程池吗</td>
+<td><strong>不能</strong>；它只在 <code>new Thread</code> 那一刻拷贝一次</td>
+</tr>
+<tr>
+<td>异步怎么传</td>
+<td>TTL 包装任务 / 包装线程池 / 显式传参；面试说”TTL 的 capture→replay→restore”就是亮点</td>
+</tr>
+<tr>
+<td>ThreadLocal vs 普通共享变量</td>
+<td>ThreadLocal 是”空间隔离”（各线程一份）；普通共享变量是”时间互斥”（加锁协调），两者用途不同</td>
+</tr>
+</tbody></table>
+<h2 id="6-速查表（背完收工）"><a href="#6-速查表（背完收工）" class="headerlink" title="6. 速查表（背完收工）"></a>6. 速查表（背完收工）</h2><table>
+<thead>
+<tr>
+<th>考察点</th>
+<th>一句话答案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数据放哪</td>
+<td>Thread 对象的 <code>threadLocals</code>（堆上），ThreadLocal 只是 key</td>
+</tr>
+<tr>
+<td>key / value 引用</td>
+<td>key 弱引用、value 强引用</td>
+</tr>
+<tr>
+<td>泄漏点</td>
+<td>长驻线程 + 不 remove + 大对象 value</td>
+</tr>
+<tr>
+<td>防御</td>
+<td>try/finally <code>remove</code>；限制使用场景</td>
+</tr>
+<tr>
+<td>异步获取</td>
+<td>默认 null；<code>new Thread</code> 用 Inheritable；线程池用 TTL</td>
+</tr>
+<tr>
+<td>排查</td>
+<td><code>jmap -histo</code> 看 <code>ThreadLocal$ThreadLocalMap</code>，MAT 查 stale entry</td>
+</tr>
+</tbody></table>
+<h2 id="7-自测三问"><a href="#7-自测三问" class="headerlink" title="7. 自测三问"></a>7. 自测三问</h2><ol>
+<li>画一下 <code>Thread → ThreadLocalMap → Entry → ThreadLocal/value</code> 的引用链，指出哪两条边是弱引用、哪里会漏？</li>
+<li>线程池跑 10 万次任务、每次 set 大对象但不 remove，为什么内存只涨不降？如果换成普通线程又会怎样？</li>
+<li>面试官说”异步子线程拿不到 ThreadLocal”，你能说出几种解法，并说明在线程池场景下为什么 <code>InheritableThreadLocal</code> 不够用？</li>
+</ol>
+<p>写完这篇，ThreadLocal 的”结构、泄漏、异步”三件套就齐了。配合 Day5 线程池、Day8 锁，Java 并发常考点基本覆盖。</p>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day9：ThreadLocal</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-09-24 15:44:45</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-09-24 15:44:45
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/09/24/复习知识点Day9-ThreadLocal/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
+</div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/ThreadLocal/">#ThreadLocal</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F/">#内存泄漏</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%BC%82%E6%AD%A5/">#异步</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/09/23/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day8-Java%E9%94%81%E6%9C%BA%E5%88%B6%E5%88%86%E7%B1%BB%E4%B8%8E%E9%9D%A2%E8%AF%95%E8%A6%81%E7%82%B9/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day8：Java锁机制分类与面试要点</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
+	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day9：ThreadLocal</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-ThreadLocal-%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9A%E5%85%88-5-%E5%88%86%E9%92%9F%E6%89%BE%E5%9B%9E%E8%AE%B0%E5%BF%86"><span class="nav-text">1. ThreadLocal 是什么：先 5 分钟找回记忆</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Key-Value-%E5%BC%95%E7%94%A8%E8%AE%BE%E8%AE%A1%EF%BC%88%E9%87%8D%E7%82%B9%E4%B8%80%EF%BC%9A%E7%9C%8B%E6%BA%90%E7%A0%81%EF%BC%89"><span class="nav-text">2. Key-Value 引用设计（重点一：看源码）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Thread-%E2%86%92-ThreadLocalMap-%E2%86%92-Entry-%E7%9A%84%E6%8C%81%E6%9C%89%E9%93%BE"><span class="nav-text">2.1 Thread → ThreadLocalMap → Entry 的持有链</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E8%AE%BE%E8%AE%A1%E5%93%B2%E5%AD%A6%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88-key-%E7%94%A8%E5%BC%B1%E5%BC%95%E7%94%A8%EF%BC%9F"><span class="nav-text">2.2 设计哲学：为什么 key 用弱引用？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-Hash-%E5%AE%9A%E4%BD%8D%E4%B8%8E%E5%BC%80%E6%94%BE%E5%AF%BB%E5%9D%80%EF%BC%88%E4%BA%86%E8%A7%A3%E5%8D%B3%E5%8F%AF%EF%BC%89"><span class="nav-text">2.3 Hash 定位与开放寻址（了解即可）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F%EF%BC%88%E9%87%8D%E7%82%B9%E4%BA%8C%EF%BC%89%EF%BC%9A%E5%88%B0%E5%BA%95%E8%B0%81%E6%BC%8F%E4%BA%86"><span class="nav-text">3. 内存泄漏（重点二）：到底谁漏了</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E6%B3%84%E6%BC%8F%E7%9A%84%E4%B8%A4%E4%B8%AA%E4%B8%BB%E8%A7%92"><span class="nav-text">3.1 泄漏的两个主角</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E6%BA%90%E7%A0%81%E9%87%8C%E5%B7%B2%E6%9C%89%E7%9A%84%E2%80%9D%E8%87%AA%E5%8A%A8%E6%B8%85%E7%90%86%E2%80%9D%E6%9C%BA%E5%88%B6"><span class="nav-text">3.2 源码里已有的”自动清理”机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E2%80%9D%E7%BA%BF%E7%A8%8B%E6%B1%A0-%E4%B8%8D-remove%E2%80%9D%E4%B8%80%E5%AE%9A%E4%BC%9A%E5%87%BA%E9%97%AE%E9%A2%98"><span class="nav-text">3.3 为什么”线程池 + 不 remove”一定会出问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E6%AD%A3%E7%A1%AE%E5%A7%BF%E5%8A%BF%EF%BC%88%E9%9D%A2%E8%AF%95%E8%83%8C%E4%B8%8B%E6%9D%A5%EF%BC%89"><span class="nav-text">3.4 正确姿势（面试背下来）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E6%80%8E%E4%B9%88%E6%8B%BF%E5%88%B0-ThreadLocal%EF%BC%88%E9%87%8D%E7%82%B9%E4%B8%89%EF%BC%89"><span class="nav-text">4. 异步任务怎么拿到 ThreadLocal（重点三）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E4%B8%80%E5%8F%A5%E8%AF%9D%E7%BB%93%E8%AE%BA"><span class="nav-text">4.1 一句话结论</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E9%BB%98%E8%AE%A4%E6%8B%BF%E4%B8%8D%E5%88%B0%EF%BC%9A%E5%80%BC%E7%BB%91%E5%AE%9A%E5%9C%A8%E2%80%9D%E6%89%A7%E8%A1%8C%E7%BA%BF%E7%A8%8B%E2%80%9D%E4%B8%8A"><span class="nav-text">4.2 默认拿不到：值绑定在”执行线程”上</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-InheritableThreadLocal%EF%BC%9A%E5%8F%AA%E8%83%BD%E2%80%9D%E7%94%9F%E5%AD%A9%E5%AD%90%E2%80%9D%EF%BC%8C%E4%B8%8D%E8%83%BD%E2%80%9D%E5%80%9F%E2%80%9D"><span class="nav-text">4.3 InheritableThreadLocal：只能”生孩子”，不能”借”</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E7%BA%BF%E7%A8%8B%E6%B1%A0-%E5%BC%82%E6%AD%A5%E4%BC%A0%E5%80%BC%E6%A0%87%E5%87%86%E6%96%B9%E6%A1%88%EF%BC%9ATransmittableThreadLocal%EF%BC%88TTL%EF%BC%89"><span class="nav-text">4.4 线程池&#x2F;异步传值标准方案：TransmittableThreadLocal（TTL）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-%E4%B8%8D%E7%94%A8%E7%9A%84%E5%B8%B8%E8%A7%81%E5%BC%82%E6%AD%A5%E5%9C%BA%E6%99%AF%E9%80%9F%E6%9F%A5"><span class="nav-text">4.5 不用的常见异步场景速查</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E9%AB%98%E9%A2%91%E9%9D%A2%E8%AF%95%E9%A2%98%E9%80%9F%E6%9F%A5"><span class="nav-text">5. 高频面试题速查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E9%80%9F%E6%9F%A5%E8%A1%A8%EF%BC%88%E8%83%8C%E5%AE%8C%E6%94%B6%E5%B7%A5%EF%BC%89"><span class="nav-text">6. 速查表（背完收工）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E8%87%AA%E6%B5%8B%E4%B8%89%E9%97%AE"><span class="nav-text">7. 自测三问</span></a></li></ol>
+
+	</div>
+</div>
+	</div>
+	
+</div>
+
+			</div>
+
+			
+		</div>
+
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2017</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">Percy jie</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 19 篇文章
+                    </span>
+                    
+                        <span>
+                            共 37.5k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
+
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
+	
+
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>

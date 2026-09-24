@@ -511,7 +511,7 @@
 
         <div class="statistics flex justify-around my-2.5">
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
-        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">57</div>
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">60</div>
         <div class="label text-third-text-color text-sm">标签</div>
     </a>
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
@@ -519,7 +519,7 @@
         <div class="label text-third-text-color text-sm">分类</div>
     </a>
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
-        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">18</div>
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">19</div>
         <div class="label text-third-text-color text-sm">文章</div>
     </a>
 </div>
@@ -588,7 +588,7 @@
 </div>
                 <div class="statistics flex justify-around my-2.5">
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
-        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">57</div>
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">60</div>
         <div class="label text-third-text-color text-sm">标签</div>
     </a>
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
@@ -596,7 +596,7 @@
         <div class="label text-third-text-color text-sm">分类</div>
     </a>
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
-        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">18</div>
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">19</div>
         <div class="label text-third-text-color text-sm">文章</div>
     </a>
 </div>
@@ -611,6 +611,85 @@
 			<div class="main-content">
 				<div class="home-content-container">
     <ul class="home-article-list">
+        
+            <li class="home-article-item">
+
+                
+
+                
+
+                
+                <div class="flex flex-col gap-5 px-7 pb-7 pt-7">
+                    <h3 class="home-article-title">
+                        <a href="/2026/09/24/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day9-ThreadLocal/">
+                            复习知识点Day9：ThreadLocal
+                        </a>
+                    </h3>
+
+                    <div class="home-article-content markdown-body">
+                        
+                            
+                            
+一句话记住今天：ThreadLocal = 「线程私有的上下文储物柜」。复习抓三条主线：① 结构（Thread → ThreadLocalMap → Entry，key 是弱引用的 ThreadLocal、value 是强引用的对象）；② 内存泄漏（key 被回收后 value 没人清理，线程池场景必须 remove）；③ 异步获取（默认拿不到 → InheritableThreadLoc...
+                        
+                    </div>
+
+                    <div class="home-article-meta-info-container">
+    <div class="home-article-meta-info">
+        <span><i class="fa-solid fa-calendars"></i>&nbsp;
+            <span class="home-article-date" data-date="Thu Sep 24 2026 15:44:45 GMT+0800">
+                
+                    2026-09-24
+                
+            </span>
+        </span>
+        
+            <span class="home-article-category">
+                <i class="fa-solid fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Java/">Java</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+        
+        
+            <span class="home-article-tag">
+                <i class="fa-solid fa-tags"></i>&nbsp;
+                <ul>
+                    
+                        <li>
+                            
+                            <a href="/tags/ThreadLocal/">ThreadLocal</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F/">内存泄漏</a>&nbsp;
+                        </li>
+                    
+                        <li>
+                            | 
+                            <a href="/tags/%E5%BC%82%E6%AD%A5/">异步</a>&nbsp;
+                        </li>
+                    
+                </ul>
+            </span>
+        
+    </div>
+
+    <a href="/2026/09/24/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day9-ThreadLocal/">阅读全文<span class="seo-reader-text">复习知识点Day9：ThreadLocal</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
+</div>
+
+                </div>
+            </li>
         
             <li class="home-article-item">
 
@@ -1353,89 +1432,6 @@ Skill（技...
                 </div>
             </li>
         
-            <li class="home-article-item">
-
-                
-
-                
-
-                
-                <div class="flex flex-col gap-5 px-7 pb-7 pt-7">
-                    <h3 class="home-article-title">
-                        <a href="/2026/09/10/mysql-%E5%A4%8D%E4%B9%A0-%E7%B4%A2%E5%BC%95%E4%B8%8E%E6%85%A2%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/">
-                            MySQL 复习：索引与慢查询优化（从 EXPLAIN 到索引失效）
-                        </a>
-                    </h3>
-
-                    <div class="home-article-content markdown-body">
-                        
-                            
-                            
-无论是线上排查问题还是面试，MySQL 的索引与 SQL 优化都是高频主题。这篇文章把「慢 SQL 定位 → EXPLAIN 分析执行计划 → 索引原理 → 建索引的原则 → 索引失效的坑」串成一条完整的复习链路，每部分都给出可直接套用的判断依据。
-
-1. 慢 SQL 先定位：从哪里发现慢查询优化之前，先要知道慢 SQL 在哪。三个常用入口：
-
-慢查询日志（slow_query_log）：...
-                        
-                    </div>
-
-                    <div class="home-article-meta-info-container">
-    <div class="home-article-meta-info">
-        <span><i class="fa-solid fa-calendars"></i>&nbsp;
-            <span class="home-article-date" data-date="Thu Sep 10 2026 17:03:00 GMT+0800">
-                
-                    2026-09-10
-                
-            </span>
-        </span>
-        
-            <span class="home-article-category">
-                <i class="fa-solid fa-folders"></i>&nbsp;
-            <ul>
-                
-                
-                    
-                        
-                        <li>
-                            <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>&nbsp;
-                        </li>
-                    
-                    
-                
-            </ul>
-        </span>
-        
-        
-            <span class="home-article-tag">
-                <i class="fa-solid fa-tags"></i>&nbsp;
-                <ul>
-                    
-                        <li>
-                            
-                            <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>&nbsp;
-                        </li>
-                    
-                        <li>
-                            | 
-                            <a href="/tags/MySQL/">MySQL</a>&nbsp;
-                        </li>
-                    
-                        <li>
-                            | 
-                            <a href="/tags/%E7%B4%A2%E5%BC%95/">索引</a>&nbsp;
-                        </li>
-                    
-                </ul>
-            </span>
-        
-    </div>
-
-    <a href="/2026/09/10/mysql-%E5%A4%8D%E4%B9%A0-%E7%B4%A2%E5%BC%95%E4%B8%8E%E6%85%A2%E6%9F%A5%E8%AF%A2%E4%BC%98%E5%8C%96/">阅读全文<span class="seo-reader-text">MySQL 复习：索引与慢查询优化（从 EXPLAIN 到索引失效）</span>&nbsp;<i class="fa-solid fa-angle-right"></i></a>
-</div>
-
-                </div>
-            </li>
-        
     </ul>
 
     <div class="home-paginator px-7 py-5">
@@ -1466,11 +1462,11 @@ Skill（技...
                 
                 <p class="post-count space-x-0.5">
                     <span>
-                        共撰写了 18 篇文章
+                        共撰写了 19 篇文章
                     </span>
                     
                         <span>
-                            共 34.5k 字
+                            共 37.5k 字
                         </span>
                     
                 </p>

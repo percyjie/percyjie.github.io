@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="AI, Java, Security, Blog">
+    
+    
+    <meta name="author" content="Percy jie">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://percyjie.github.io/2026/09/28/复习知识点day10-redis持久化与单线程模型/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day10：Redis持久化与单线程模型">
+<meta property="og:url" content="https://percyjie.github.io/2026/09/28/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day10-Redis%E6%8C%81%E4%B9%85%E5%8C%96%E4%B8%8E%E5%8D%95%E7%BA%BF%E7%A8%8B%E6%A8%A1%E5%9E%8B/index.html">
+<meta property="og:site_name" content="Percy&#39;s Note">
+<meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-09-28T08:36:43.000Z">
+<meta property="article:modified_time" content="2026-09-28T08:36:43.000Z">
+<meta property="article:author" content="Percy jie">
+<meta property="article:tag" content="AOF">
+<meta property="article:tag" content="RDB">
+<meta property="article:tag" content="Redis">
+<meta property="article:tag" content="单线程">
+<meta property="article:tag" content="多线程">
+<meta property="article:tag" content="持久化">
+<meta property="article:tag" content="面试">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            复习知识点Day10：Redis持久化与单线程模型 | Percy&#39;s Note
+        
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"percyjie.github.io","root":"/","language":"zh-CN"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"vs2015"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/redefine-og.webp","description":"人没有梦想，和咸鱼有什么分别"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Percy's Note","subtitle":{"text":["人没有梦想，和咸鱼有什么分别"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"default","links":[{"icon":"fa-brands fa-github","url":"https://github.com/percyjie"},{"icon":"fa-brands fa-weibo","url":"https://weibo.com/panjie0709"},{"icon":null,"url":null},{"icon":null,"url":null},{"icon":null,"url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"cloud","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":{"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}}},"article_date_format":"auto","excerpt_length":200,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart fa-beat\" style=\"--fa-animation-duration: 0.5s; color: #f54545\"></i>","start":"2017/03/08 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2017/03/08 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                Percy&#39;s Note
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/tags"
+                                        >
+                                    <i class="fa-regular fa-tags fa-fw"></i>
+                                    标签
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/tags"
+                        >
+                            <span>
+                                标签
+                            </span>
+                            
+                                <i class="fa-regular fa-tags fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">65</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">9</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">20</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+
+			<div class="main-content">
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
+
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day10：Redis持久化与单线程模型</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv3</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-09-28 16:36:43</span>
+        <span class="mobile">2026-09-28 16:36:43</span>
+        <span class="hover-info">创建</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-09-28 16:36:43</span>
+            <span class="mobile">2026-09-28 16:36:43</span>
+            <span class="hover-info">更新</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Redis/">Redis</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Redis/">Redis</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E6%8C%81%E4%B9%85%E5%8C%96/">持久化</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/RDB/">RDB</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/AOF/">AOF</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%8D%95%E7%BA%BF%E7%A8%8B/">单线程</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%9A%E7%BA%BF%E7%A8%8B/">多线程</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>2.6k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>9 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天：<strong>Redis = 内存里的单线程执行引擎 + 持久化兜底</strong>。本篇抓三条主线：① 持久化（<strong>RDB 快照 / AOF 日志 / 混合持久化</strong>，各有丢数据窗口与恢复速度的取舍）；② 线程模型（<strong>命令执行永远是单线程</strong>，6.0 起网络 IO 可多线程，还有后台 bio/lazy free 线程）；③ 面试高频考点（选型、触发方式、恢复优先级、fork + COW、为什么单线程还快）。</p>
+</blockquote>
+<h2 id="1-Redis-是什么：先-5-分钟找回记忆"><a href="#1-Redis-是什么：先-5-分钟找回记忆" class="headerlink" title="1. Redis 是什么：先 5 分钟找回记忆"></a>1. Redis 是什么：先 5 分钟找回记忆</h2><ul>
+<li><strong>定位</strong>：基于内存的高性能 Key-Value 数据库，数据主要在内存，所以快（单机轻松 10 万+ QPS）。</li>
+<li><strong>常见用途</strong>：缓存、分布式锁、计数器/排行榜、限流、消息队列（Stream/PubSub）、分布式会话。</li>
+<li><strong>为什么面试爱考 Redis</strong>：绝大部分 Java 后端天天在用，但 90% 的人说不清”数据怎么落盘””到底几个线程”，这两点正是本文主线。</li>
+</ul>
+<div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 快速验证几个核心概念</span></span><br><span class="line">redis-cli <span class="built_in">set</span> user:1 <span class="string">&quot;percyjie&quot;</span></span><br><span class="line">redis-cli bgsave                  <span class="comment"># 触发 RDB 后台快照</span></span><br><span class="line">redis-cli config get appendonly   <span class="comment"># 查看 AOF 是否开启</span></span><br></pre></td></tr></table></figure></div>
+
+<h2 id="2-Redis-内存持久化方案（重点一：背对比表）"><a href="#2-Redis-内存持久化方案（重点一：背对比表）" class="headerlink" title="2. Redis 内存持久化方案（重点一：背对比表）"></a>2. Redis 内存持久化方案（重点一：背对比表）</h2><p>Redis 数据在内存，<strong>进程一退出就全没了</strong>，所以要有持久化。方案有三类：<strong>RDB（快照）、AOF（追加日志）、混合持久化（4.0+）</strong>。</p>
+<h3 id="2-1-RDB：内存快照（二进制）"><a href="#2-1-RDB：内存快照（二进制）" class="headerlink" title="2.1 RDB：内存快照（二进制）"></a>2.1 RDB：内存快照（二进制）</h3><ul>
+<li>过程：把某个时间点的<strong>全量内存数据</strong>序列化写成 <code>dump.rdb</code>（二进制，体积小）。</li>
+<li>触发方式（面试必背）：<ul>
+<li><code>SAVE</code>：<strong>同步阻塞</strong>主线程生成，生产别用；</li>
+<li><code>BGSAVE</code>：<strong>fork 子进程</strong>异步生成，主线程继续服务（推荐）；</li>
+<li>自动触发：满足 save 条件（如 <code>save 900 1 300 10 60 10000</code>，即 900 秒内有 1 次写 / 300 秒 10 次 / 60 秒 1 万次）；</li>
+<li>优雅关闭且允许保存时；主从复制全量同步时 master 也会 bgsave 生成 RDB 发给从机。</li>
+</ul>
+</li>
+<li>原理图（必会画）：</li>
+</ul>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">主进程 ──fork()──▶ 子进程（共享内存页，写时复制 COW）</span><br><span class="line">   │                    │</span><br><span class="line">   │ 继续服务读写请求      │ 读取内存快照 → 写 dump.rdb</span><br><span class="line">   └── 修改页触发 COW ──▶ 复制一份版本给子进程用，保证快照一致</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li>优点：文件小、恢复快（一次加载全量）、方便做定期备份/异地灾备。</li>
+<li>缺点：<strong>两个快照之间写的数据会丢</strong>（丢数据窗口大）；<code>fork()</code> 瞬间可能阻塞主线程（大实例明显）；快照期间写多时 COW 会让内存临时上涨。</li>
+</ul>
+<h3 id="2-2-AOF：追加写日志"><a href="#2-2-AOF：追加写日志" class="headerlink" title="2.2 AOF：追加写日志"></a>2.2 AOF：追加写日志</h3><ul>
+<li>过程：把<strong>每一条写命令</strong>追加到 <code>appendonly.aof</code>（文本，可读可审计），启动时重放命令恢复数据。</li>
+<li>配置开关 <code>appendonly yes</code>；写回策略三档（背熟）：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>配置值</th>
+<th>fsync 时机</th>
+<th>丢数据风险</th>
+<th>速度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>每改必刷</td>
+<td><code>always</code></td>
+<td>每条写命令都 fsync</td>
+<td>几乎不丢（最多宕机瞬间那一条）</td>
+<td>最慢</td>
+</tr>
+<tr>
+<td>每秒刷一次（推荐）</td>
+<td><code>everysec</code></td>
+<td>每秒 fsync 一次</td>
+<td><strong>最多丢 1 秒左右的数据</strong></td>
+<td>快</td>
+</tr>
+<tr>
+<td>交给系统</td>
+<td><code>no</code></td>
+<td>由操作系统决定何时落盘</td>
+<td>不可控</td>
+<td>最快</td>
+</tr>
+</tbody></table>
+<ul>
+<li>文件内容示例（注意是 RESP 协议文本）：</li>
+</ul>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">*2\r\n$6\r\nSELECT\r\n$1\r\n0\r\n</span><br><span class="line">*3\r\n$3\r\nSET\r\n$4\r\nuser\r\n$6\r\n张三\r\n</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li><strong>AOF 文件会越来越大</strong>，所以要自动重写 <code>bgrewriteaof</code>：<ul>
+<li>触发：<code>auto-aof-rewrite-percentage 100</code>（较上次重写增长 100%）且 <code>auto-aof-rewrite-min-size 64mb</code>（超过 64 MB）；</li>
+<li>重写 = 基于当前内存生成<strong>最小命令集</strong>（比如 100 次 incr 合并成一次 set），不是简单清旧文件；</li>
+<li>重写期间新命令先进 <code>aof_rewrite_buf</code> 缓冲，子进程完成后合并，保证不丢。</li>
+</ul>
+</li>
+<li>优点：丢数据少（everysec 最多 ~1 秒）；可读、可修复。</li>
+<li>缺点：文件比 RDB 大；恢复重放慢；fsync 频繁影响写性能。</li>
+</ul>
+<blockquote>
+<p>抢答点：”AOF 重写时主进程还能继续服务吗？”能。它和 BGSAVE 一样走 fork + COW，重写期间新写命令先进缓冲区，两阶段合并。</p>
+</blockquote>
+<h3 id="2-3-混合持久化（Redis-4-0-，生产首选）"><a href="#2-3-混合持久化（Redis-4-0-，生产首选）" class="headerlink" title="2.3 混合持久化（Redis 4.0+，生产首选）"></a>2.3 混合持久化（Redis 4.0+，生产首选）</h3><ul>
+<li>配置：<code>aof-use-rdb-preamble yes</code>。</li>
+<li>形态：AOF 文件头部是<strong>RDB 全量快照</strong>，尾部追加<strong>AOF 增量命令</strong>。</li>
+<li>收益：<strong>加载快（RDB 头）+ 丢数据少（增量尾巴）</strong>，两者优点兼得。Redis 7.0 还升级成”多分区 AOF”（manifest + base + incr），重写更稳。</li>
+</ul>
+<h3 id="2-4-数据恢复优先级（面试高频）"><a href="#2-4-数据恢复优先级（面试高频）" class="headerlink" title="2.4 数据恢复优先级（面试高频）"></a>2.4 数据恢复优先级（面试高频）</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">Redis 启动</span><br><span class="line"> ├─ 开启 AOF 且有 AOF 文件 ──是──▶ 加载 AOF（混合头就先 RDB 再增量）</span><br><span class="line"> └─ 否───────────────────────▶ 加载 dump.rdb</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li>AOF 文件损坏 → <code>redis-check-aof --fix</code> 修复；RDB 损坏 → <code>redis-check-rdb</code> 校验兜底。</li>
+<li>生产必须<strong>定期把 RDB 文件备份到异地</strong>：AOF/RDB 文件都丢，数据救不回。</li>
+</ul>
+<h3 id="2-5-选型建议（面试答题模板）"><a href="#2-5-选型建议（面试答题模板）" class="headerlink" title="2.5 选型建议（面试答题模板）"></a>2.5 选型建议（面试答题模板）</h3><table>
+<thead>
+<tr>
+<th>使用场景</th>
+<th>推荐方案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>纯缓存，丢数据无痛</td>
+<td>关持久化（省 IO 和 fork）</td>
+</tr>
+<tr>
+<td>缓存 + 数据，可容忍丢几秒</td>
+<td><strong>RDB + AOF everysec + 混合持久化</strong>（生产标配）</td>
+</tr>
+<tr>
+<td>严格不丢数据</td>
+<td>AOF <code>always</code>（性能代价大，一般不用）</td>
+</tr>
+<tr>
+<td>灾备/离线恢复</td>
+<td>RDB 定期全量 + AOF 增量，异地备份</td>
+</tr>
+</tbody></table>
+<h2 id="3-单线程还是多线程（重点二）：别再答错了"><a href="#3-单线程还是多线程（重点二）：别再答错了" class="headerlink" title="3. 单线程还是多线程（重点二）：别再答错了"></a>3. 单线程还是多线程（重点二）：别再答错了</h2><h3 id="3-1-一句话结论"><a href="#3-1-一句话结论" class="headerlink" title="3.1 一句话结论"></a>3.1 一句话结论</h3><p><strong>命令执行 + 主事件循环 = 单线程；网络 IO（6.0+）= 多线程；后台脏活（bio / lazy free）= 多线程。</strong></p>
+<p>所以面试答”Redis 是单线程”不完整，答”Redis 6.0 是多线程”更不对：<strong>核心命令执行始终由一个主线程串行完成</strong>。</p>
+<h3 id="3-2-版本时间轴（背时间点）"><a href="#3-2-版本时间轴（背时间点）" class="headerlink" title="3.2 版本时间轴（背时间点）"></a>3.2 版本时间轴（背时间点）</h3><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>变化</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2.x ~ 5.x</td>
+<td>全单线程</td>
+<td>命令执行、网络 IO 都单线程（IO 多路复用）</td>
+</tr>
+<tr>
+<td>4.0</td>
+<td>引入 Lazy Free</td>
+<td><code>UNLINK</code>/<code>FLUSHDB ASYNC</code> 等大 key 删除放后台线程（bio）异步释放</td>
+</tr>
+<tr>
+<td>6.0</td>
+<td>网络 IO 多线程</td>
+<td><code>io-threads</code> 只分担读写解析，<strong>命令执行仍是主线程单线程</strong>（默认关）</td>
+</tr>
+<tr>
+<td>7.0</td>
+<td>多分区 AOF</td>
+<td>让 AOF 重写/加载更稳，不改变单线程执行模型</td>
+</tr>
+</tbody></table>
+<h3 id="3-3-为什么单线程还能这么快（背这-5-条）"><a href="#3-3-为什么单线程还能这么快（背这-5-条）" class="headerlink" title="3.3 为什么单线程还能这么快（背这 5 条）"></a>3.3 为什么单线程还能这么快（背这 5 条）</h3><ol>
+<li><strong>纯内存</strong>：读写不落盘（持久化除外），随机 IO 都在 RAM；</li>
+<li><strong>数据结构高效</strong>：跳表、哈希、quicklist/压缩列表等专用结构，读写复杂度低；</li>
+<li><strong>IO 多路复用（epoll/kqueue）</strong>：单线程同时监听大量 socket，事件驱动；</li>
+<li><strong>免锁免切换</strong>：单线程执行命令 → 无竞争、无锁、无上下文切换（性能最大来源）；</li>
+<li><strong>命令本身快</strong>：单命令 O(1)/O(logN)，没有复杂 SQL 计算灾难。</li>
+</ol>
+<p>事件循环简图：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">┌──────────────────────────────────────────────┐</span><br><span class="line">│ 事件循环（主线程）                             │</span><br><span class="line">│  1. epoll 等事件（网络/定时/文件事件）         │</span><br><span class="line">│  2. 依次执行命令 → 回写客户端 response         │</span><br><span class="line">└───────▲──────────────────────────┴────────────┘</span><br><span class="line">        │ 多个 client socket</span><br><span class="line">client-A / client-B / client-C / ...</span><br></pre></td></tr></table></figure></div>
+
+<p>6.0 的网络 IO 多线程只是把”读请求、写响应”分工给 <code>io-threads</code> 个线程，<strong>第 2 步命令执行依然由主事件线程串行跑</strong>。</p>
+<h3 id="3-4-为什么命令执行不搞多线程（进阶加分）"><a href="#3-4-为什么命令执行不搞多线程（进阶加分）" class="headerlink" title="3.4 为什么命令执行不搞多线程（进阶加分）"></a>3.4 为什么命令执行不搞多线程（进阶加分）</h3><ul>
+<li><strong>CPU 不是瓶颈</strong>：Redis 瓶颈主要是<strong>内存容量和网络带宽</strong>，多线程救不了这些瓶颈；</li>
+<li>多线程引入<strong>锁竞争、缓存一致性问题</strong>，Redis 的并发优势恰好是”无锁”；</li>
+<li>要吃掉多核：主流是<strong>多实例分片/集群</strong>（每实例仍是单线程核心），而非给单实例加命令线程。</li>
+</ul>
+<h3 id="3-5-“线程”细节追问（高级）"><a href="#3-5-“线程”细节追问（高级）" class="headerlink" title="3.5 “线程”细节追问（高级）"></a>3.5 “线程”细节追问（高级）</h3><table>
+<thead>
+<tr>
+<th>追问</th>
+<th>答案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>bgsave</code> 期间还能写吗</td>
+<td>能。fork 后父子共享内存，写触发 COW 复制页，快照干净</td>
+</tr>
+<tr>
+<td><code>fork</code> 为什么会阻塞</td>
+<td>复制页表耗时；内存越大、fork 越慢，大实例可能阻塞几百 ms 到秒级</td>
+</tr>
+<tr>
+<td>删除大 key 会卡吗</td>
+<td>会。同步 <code>DEL</code> 大集合阻塞；用 <code>UNLINK</code> 走后台 lazy free</td>
+</tr>
+<tr>
+<td>后台还有哪些线程</td>
+<td>bio 线程：文件/关闭、AOF fsync、lazy free；bgsave/rewrite 还有子进程</td>
+</tr>
+<tr>
+<td>COW 内存翻倍吗</td>
+<td>写多少页翻多少页，写越猛涨越多，需监控内存占用</td>
+</tr>
+</tbody></table>
+<h2 id="4-面试高频考点清单（重点三）：背题表来了"><a href="#4-面试高频考点清单（重点三）：背题表来了" class="headerlink" title="4. 面试高频考点清单（重点三）：背题表来了"></a>4. 面试高频考点清单（重点三）：背题表来了</h2><h3 id="4-1-持久化方向"><a href="#4-1-持久化方向" class="headerlink" title="4.1 持久化方向"></a>4.1 持久化方向</h3><table>
+<thead>
+<tr>
+<th>常问考法</th>
+<th>答题要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>几种持久化方案</td>
+<td>RDB、AOF、混合（4.0+）</td>
+</tr>
+<tr>
+<td>RDB 触发方式</td>
+<td>save / bgsave / 自动条件 / 主从全量复制</td>
+</tr>
+<tr>
+<td>AOF 写回策略</td>
+<td>always / everysec / no，区别丢几秒</td>
+</tr>
+<tr>
+<td>AOF 文件膨胀</td>
+<td>bgrewriteaof（重写 + 缓冲合并）</td>
+</tr>
+<tr>
+<td>恢复优先级</td>
+<td>AOF 优先，无 AOF 用 RDB</td>
+</tr>
+<tr>
+<td>混合持久化</td>
+<td>快照 + 增量双保</td>
+</tr>
+<tr>
+<td>Fork 阻塞</td>
+<td>复制页表耗时 + COW 内存放大</td>
+</tr>
+<tr>
+<td>丢数据结论</td>
+<td>RDB 窗口大；AOF everysec ≤1 秒；always 几乎不丢</td>
+</tr>
+</tbody></table>
+<h3 id="4-2-单-多线程方向"><a href="#4-2-单-多线程方向" class="headerlink" title="4.2 单/多线程方向"></a>4.2 单/多线程方向</h3><table>
+<thead>
+<tr>
+<th>常考考法</th>
+<th>答题要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Redis 是单线程吗</td>
+<td>执行命令单线程；6.0 网络 IO 多线程；后台 bio/lazy free 线程</td>
+</tr>
+<tr>
+<td>为什么快</td>
+<td>内存 + IO 复用 + 单线程无竞争 + 数据结构</td>
+</tr>
+<tr>
+<td>6.0 多线程做什么</td>
+<td>分担 socket 读出写回，不碰数据执行</td>
+</tr>
+<tr>
+<td>懒删除</td>
+<td>unlink / flushdb async，释放大 key 不阻塞</td>
+</tr>
+<tr>
+<td>阻塞命令</td>
+<td>keys、大集合全量、save、fork、同步 DEL 大 key</td>
+</tr>
+</tbody></table>
+<h3 id="4-3-三连追问：Redis-变慢怎么查"><a href="#4-3-三连追问：Redis-变慢怎么查" class="headerlink" title="4.3 三连追问：Redis 变慢怎么查"></a>4.3 三连追问：Redis 变慢怎么查</h3><div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line">slowlog get 50         <span class="comment"># 最近 50 条慢命令</span></span><br><span class="line">info persistence       <span class="comment"># 持久化状态、bgsave 是否进行中</span></span><br><span class="line">redis-cli --bigkeys    <span class="comment"># 大 key 排查（大 key = 慢查询与内存问题之源）</span></span><br><span class="line">CONFIG GET slowlog-log-slower-than</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="5-生产可用配置模板（redis-conf-重点行）"><a href="#5-生产可用配置模板（redis-conf-重点行）" class="headerlink" title="5. 生产可用配置模板（redis.conf 重点行）"></a>5. 生产可用配置模板（redis.conf 重点行）</h2><div class="code-container" data-rel="Plaintext"><figure class="iseeu highlight plaintext"><table><tr><td class="code"><pre><span class="line"># ---------- 持久化 ----------</span><br><span class="line">save 3600 1 300 100 60 10000      # RDB 自动触发（N 秒 M 次写）</span><br><span class="line">appendonly yes                 # 开启 AOF</span><br><span class="line">appendfilename &quot;appendonly.aof&quot;</span><br><span class="line">appendfsync everysec           # 每秒 fsync（生产默认）</span><br><span class="line">auto-aof-rewrite-percentage 100 # 重写条件：增长 100%</span><br><span class="line">auto-aof-rewrite-min-size 64mb  # 且文件 ≥ 64MB 才触发重写</span><br><span class="line">aof-use-rdb-preamble yes       # 混合持久化（4.0+）</span><br><span class="line"></span><br><span class="line"># ---------- 单线程/多线程 ----------</span><br><span class="line">io-threads 4                  # 6.0+ 网络 IO 线程数（默认 1，多核再开）</span><br><span class="line">io-threads-do-reads yes       # 读请求也走多线程（按需）</span><br><span class="line"></span><br><span class="line"># ---------- 排查/大 key ----------</span><br><span class="line">lazyfree-lazy-user-del yes    # DEL 转异步释放（Redis 6.0+）</span><br><span class="line">slowlog-log-slower-than 10000 # 10ms 以上记慢日志（单位微秒）</span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p>注意：不要用 <code>KEYS *</code>，用 <code>SCAN</code>；删大 key 统一 <code>UNLINK</code>。</p>
+</blockquote>
+<h2 id="6-自测三问"><a href="#6-自测三问" class="headerlink" title="6. 自测三问"></a>6. 自测三问</h2><ol>
+<li>简述 RDB 与 AOF 的触发、优缺点与丢数据窗口，给出生产推荐组合并说明为什么？</li>
+<li>面试官说”Redis 6.0 已经多线程了”，你怎么回？（答：命令执行仍单线程、6.0 网络 IO 多线程、4.0 起还有 bio/lazy free。）</li>
+<li>主从复制全量同步、bgsave、AOF 重写三者共同点是什么？各自怎么影响主线程？</li>
+</ol>
+<p>写完收工，配合 Day5 线程池与 Day9 ThreadLocal，缓存的”存储与线程”体系闭环。</p>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day10：Redis持久化与单线程模型</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-09-28 16:36:43</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-09-28 16:36:43
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/09/28/复习知识点Day10-Redis持久化与单线程模型/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
+</div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%9D%A2%E8%AF%95/">#面试</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Redis/">#Redis</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E6%8C%81%E4%B9%85%E5%8C%96/">#持久化</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/RDB/">#RDB</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/AOF/">#AOF</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%8D%95%E7%BA%BF%E7%A8%8B/">#单线程</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%9A%E7%BA%BF%E7%A8%8B/">#多线程</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/09/24/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day9-ThreadLocal/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day9：ThreadLocal</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
+	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day10：Redis持久化与单线程模型</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Redis-%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9A%E5%85%88-5-%E5%88%86%E9%92%9F%E6%89%BE%E5%9B%9E%E8%AE%B0%E5%BF%86"><span class="nav-text">1. Redis 是什么：先 5 分钟找回记忆</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Redis-%E5%86%85%E5%AD%98%E6%8C%81%E4%B9%85%E5%8C%96%E6%96%B9%E6%A1%88%EF%BC%88%E9%87%8D%E7%82%B9%E4%B8%80%EF%BC%9A%E8%83%8C%E5%AF%B9%E6%AF%94%E8%A1%A8%EF%BC%89"><span class="nav-text">2. Redis 内存持久化方案（重点一：背对比表）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-RDB%EF%BC%9A%E5%86%85%E5%AD%98%E5%BF%AB%E7%85%A7%EF%BC%88%E4%BA%8C%E8%BF%9B%E5%88%B6%EF%BC%89"><span class="nav-text">2.1 RDB：内存快照（二进制）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-AOF%EF%BC%9A%E8%BF%BD%E5%8A%A0%E5%86%99%E6%97%A5%E5%BF%97"><span class="nav-text">2.2 AOF：追加写日志</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%B7%B7%E5%90%88%E6%8C%81%E4%B9%85%E5%8C%96%EF%BC%88Redis-4-0-%EF%BC%8C%E7%94%9F%E4%BA%A7%E9%A6%96%E9%80%89%EF%BC%89"><span class="nav-text">2.3 混合持久化（Redis 4.0+，生产首选）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E6%95%B0%E6%8D%AE%E6%81%A2%E5%A4%8D%E4%BC%98%E5%85%88%E7%BA%A7%EF%BC%88%E9%9D%A2%E8%AF%95%E9%AB%98%E9%A2%91%EF%BC%89"><span class="nav-text">2.4 数据恢复优先级（面试高频）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-%E9%80%89%E5%9E%8B%E5%BB%BA%E8%AE%AE%EF%BC%88%E9%9D%A2%E8%AF%95%E7%AD%94%E9%A2%98%E6%A8%A1%E6%9D%BF%EF%BC%89"><span class="nav-text">2.5 选型建议（面试答题模板）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%8D%95%E7%BA%BF%E7%A8%8B%E8%BF%98%E6%98%AF%E5%A4%9A%E7%BA%BF%E7%A8%8B%EF%BC%88%E9%87%8D%E7%82%B9%E4%BA%8C%EF%BC%89%EF%BC%9A%E5%88%AB%E5%86%8D%E7%AD%94%E9%94%99%E4%BA%86"><span class="nav-text">3. 单线程还是多线程（重点二）：别再答错了</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E4%B8%80%E5%8F%A5%E8%AF%9D%E7%BB%93%E8%AE%BA"><span class="nav-text">3.1 一句话结论</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E7%89%88%E6%9C%AC%E6%97%B6%E9%97%B4%E8%BD%B4%EF%BC%88%E8%83%8C%E6%97%B6%E9%97%B4%E7%82%B9%EF%BC%89"><span class="nav-text">3.2 版本时间轴（背时间点）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8D%95%E7%BA%BF%E7%A8%8B%E8%BF%98%E8%83%BD%E8%BF%99%E4%B9%88%E5%BF%AB%EF%BC%88%E8%83%8C%E8%BF%99-5-%E6%9D%A1%EF%BC%89"><span class="nav-text">3.3 为什么单线程还能这么快（背这 5 条）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C%E4%B8%8D%E6%90%9E%E5%A4%9A%E7%BA%BF%E7%A8%8B%EF%BC%88%E8%BF%9B%E9%98%B6%E5%8A%A0%E5%88%86%EF%BC%89"><span class="nav-text">3.4 为什么命令执行不搞多线程（进阶加分）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E2%80%9C%E7%BA%BF%E7%A8%8B%E2%80%9D%E7%BB%86%E8%8A%82%E8%BF%BD%E9%97%AE%EF%BC%88%E9%AB%98%E7%BA%A7%EF%BC%89"><span class="nav-text">3.5 “线程”细节追问（高级）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E9%9D%A2%E8%AF%95%E9%AB%98%E9%A2%91%E8%80%83%E7%82%B9%E6%B8%85%E5%8D%95%EF%BC%88%E9%87%8D%E7%82%B9%E4%B8%89%EF%BC%89%EF%BC%9A%E8%83%8C%E9%A2%98%E8%A1%A8%E6%9D%A5%E4%BA%86"><span class="nav-text">4. 面试高频考点清单（重点三）：背题表来了</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%8C%81%E4%B9%85%E5%8C%96%E6%96%B9%E5%90%91"><span class="nav-text">4.1 持久化方向</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%8D%95-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E6%96%B9%E5%90%91"><span class="nav-text">4.2 单&#x2F;多线程方向</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E4%B8%89%E8%BF%9E%E8%BF%BD%E9%97%AE%EF%BC%9ARedis-%E5%8F%98%E6%85%A2%E6%80%8E%E4%B9%88%E6%9F%A5"><span class="nav-text">4.3 三连追问：Redis 变慢怎么查</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E7%94%9F%E4%BA%A7%E5%8F%AF%E7%94%A8%E9%85%8D%E7%BD%AE%E6%A8%A1%E6%9D%BF%EF%BC%88redis-conf-%E9%87%8D%E7%82%B9%E8%A1%8C%EF%BC%89"><span class="nav-text">5. 生产可用配置模板（redis.conf 重点行）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E8%87%AA%E6%B5%8B%E4%B8%89%E9%97%AE"><span class="nav-text">6. 自测三问</span></a></li></ol>
+
+	</div>
+</div>
+	</div>
+	
+</div>
+
+			</div>
+
+			
+		</div>
+
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2017</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">Percy jie</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 20 篇文章
+                    </span>
+                    
+                        <span>
+                            共 40.1k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
+
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
+	
+
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>

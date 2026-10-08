@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="AI, Java, Security, Blog">
+    
+    
+    <meta name="author" content="Percy jie">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://percyjie.github.io/2026/10/08/复习知识点day12-法律文书检索系统es与mysql混合架构/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day12：法律文书检索系统ES与MySQL混合架构">
+<meta property="og:url" content="https://percyjie.github.io/2026/10/08/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day12-%E6%B3%95%E5%BE%8B%E6%96%87%E4%B9%A6%E6%A3%80%E7%B4%A2%E7%B3%BB%E7%BB%9FES%E4%B8%8EMySQL%E6%B7%B7%E5%90%88%E6%9E%B6%E6%9E%84/index.html">
+<meta property="og:site_name" content="Percy&#39;s Note">
+<meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-10-08T09:05:17.000Z">
+<meta property="article:modified_time" content="2026-10-08T09:05:17.000Z">
+<meta property="article:author" content="Percy jie">
+<meta property="article:tag" content="Canal">
+<meta property="article:tag" content="ES">
+<meta property="article:tag" content="Elasticsearch">
+<meta property="article:tag" content="MySQL">
+<meta property="article:tag" content="复习知识点">
+<meta property="article:tag" content="搜索">
+<meta property="article:tag" content="系统设计">
+<meta property="article:tag" content="面试">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            复习知识点Day12：法律文书检索系统ES与MySQL混合架构 | Percy&#39;s Note
+        
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"percyjie.github.io","root":"/","language":"zh-CN"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"vs2015"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/redefine-og.webp","description":"人没有梦想，和咸鱼有什么分别"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Percy's Note","subtitle":{"text":["人没有梦想，和咸鱼有什么分别"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"default","links":[{"icon":"fa-brands fa-github","url":"https://github.com/percyjie"},{"icon":"fa-brands fa-weibo","url":"https://weibo.com/panjie0709"},{"icon":null,"url":null},{"icon":null,"url":null},{"icon":null,"url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"cloud","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":{"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}}},"article_date_format":"auto","excerpt_length":200,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart fa-beat\" style=\"--fa-animation-duration: 0.5s; color: #f54545\"></i>","start":"2017/03/08 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2017/03/08 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                Percy&#39;s Note
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/tags"
+                                        >
+                                    <i class="fa-regular fa-tags fa-fw"></i>
+                                    标签
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/tags"
+                        >
+                            <span>
+                                标签
+                            </span>
+                            
+                                <i class="fa-regular fa-tags fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">70</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">10</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">22</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+
+			<div class="main-content">
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
+
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day12：法律文书检索系统ES与MySQL混合架构</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv3</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-10-08 17:05:17</span>
+        <span class="mobile">2026-10-08 17:05:17</span>
+        <span class="hover-info">创建</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-10-08 17:05:17</span>
+            <span class="mobile">2026-10-08 17:05:17</span>
+            <span class="hover-info">更新</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/">中间件</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/MySQL/">MySQL</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">复习知识点</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Elasticsearch/">Elasticsearch</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/ES/">ES</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E6%90%9C%E7%B4%A2/">搜索</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/">系统设计</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Canal/">Canal</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>3.6k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>14 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天：<strong>法律文书检索 = ES 只管搜（返回 id 列表），MySQL 只负责存（拿 id 回表查全量）</strong>。面试抓四块：① 为什么不用 MySQL <code>LIKE</code>；② 索引设计（mapping 类型、IK 法律词库、分片与别名）；③ 数据同步（binlog → Canal → Kafka → ES，保证顺序、幂等、能对账）；④ 查询链路（id 回表、<code>filter</code> 与 <code>must</code>、<code>search_after</code> 深分页、BM25 相关性）。</p>
+</blockquote>
+<h2 id="先说结论：整个方案就是一组权衡"><a href="#先说结论：整个方案就是一组权衡" class="headerlink" title="先说结论：整个方案就是一组权衡"></a>先说结论：整个方案就是一组权衡</h2><p>法律文书的核心需求是<strong>全文检索</strong>：按关键词、案由、法院、裁判日期去搜海量文书。最朴素的 MySQL <code>LIKE &#39;%关键词%&#39;</code> 走不了索引，数据量一上来就是全表扫描，延迟完全不可接受，所以引入 ES。</p>
+<p>整体架构一句话：<strong>ES 只负责检索，MySQL 只负责存储</strong>。查询链路是先在 ES 里搜出符合条件的 id 列表，再拿这批 id 回 MySQL 查完整数据，最后组装返回。</p>
+<p>为什么要这样折中？三个核心权衡：</p>
+<table>
+<thead>
+<tr>
+<th>权衡</th>
+<th>怎么做</th>
+<th>换来什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数据源</td>
+<td>MySQL 是唯一真实数据源，ES 只存检索字段</td>
+<td>强一致、可事务，ES 挂了可降级</td>
+</tr>
+<tr>
+<td>写入方式</td>
+<td>binlog 异步同步到 ES</td>
+<td>检索性能从秒级降到毫秒级，业务无侵入</td>
+</tr>
+<tr>
+<td>存储</td>
+<td>ES 不存全量文书，回表取正文</td>
+<td>索引体积小、存储成本可控，代价是一次回表</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>面试开场白：”我们采用 ES + MySQL 混合架构：ES 建倒排索引做毫秒级全文检索，MySQL 做唯一数据源保证强一致，通过 Canal 监听 binlog 异步同步到 ES，接受秒级最终一致；查询两阶段，先拿 id 再批量回表，用最终一致换检索性能。”</p>
+</blockquote>
+<h2 id="一、背景：为什么不能只靠-MySQL-检索"><a href="#一、背景：为什么不能只靠-MySQL-检索" class="headerlink" title="一、背景：为什么不能只靠 MySQL 检索"></a>一、背景：为什么不能只靠 MySQL 检索</h2><p>早期直接用 MySQL 的 <code>LIKE &#39;%关键词%&#39;</code> 搜文书：</p>
+<div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> judgment</span><br><span class="line"><span class="keyword">WHERE</span> content <span class="keyword">LIKE</span> <span class="string">&#x27;%表见代理%&#x27;</span></span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> judgment_date <span class="keyword">DESC</span>;</span><br></pre></td></tr></table></figure></div>
+
+<p>问题很明显：</p>
+<ul>
+<li><strong>无法走索引</strong>：前导通配符 <code>%</code> 让 B+ 树索引失效，只能全表扫描；</li>
+<li><strong>数据量大就崩</strong>：文书数据量是百万、千万级，扫描一次几十秒甚至分钟级；</li>
+<li><strong>没有相关性</strong>：<code>LIKE</code> 只能判断”有没有”，不能按相关度排序，也不能做高亮、聚合。</li>
+</ul>
+<h3 id="为什么不干脆全存-ES"><a href="#为什么不干脆全存-ES" class="headerlink" title="为什么不干脆全存 ES"></a>为什么不干脆全存 ES</h3><p>法律文书是<strong>强一致、高价值、要落库</strong>的数据：</p>
+<table>
+<thead>
+<tr>
+<th>ES 的短板</th>
+<th>为什么不能接受</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>不是事务型数据库</td>
+<td>单文档更新原子性没问题，但没有跨文档事务、没有外键约束</td>
+</tr>
+<tr>
+<td>更新代价高</td>
+<td>分词重算 + 倒排索引重建，频繁更新成本高</td>
+</tr>
+<tr>
+<td>存储成本高</td>
+<td>副本 + 倒排索引翻倍膨胀，整篇存正文非常贵</td>
+</tr>
+<tr>
+<td>数据可靠性</td>
+<td>集群抖动、刷新窗口内数据可能不一致，不能当唯一数据源</td>
+</tr>
+</tbody></table>
+<p>所以 <strong>ES 里只存需要检索的字段</strong>：标题、案由、正文（索引字段）、法院、文书类型、裁判日期。真实全量数据永远在 MySQL。代价是<strong>最终一致</strong>——数据通过 binlog 异步同步到 ES，有秒级延迟，这种场景业务上完全可接受。</p>
+<h2 id="二、索引设计：三大块"><a href="#二、索引设计：三大块" class="headerlink" title="二、索引设计：三大块"></a>二、索引设计：三大块</h2><h3 id="2-1-mapping：text-还是-keyword"><a href="#2-1-mapping：text-还是-keyword" class="headerlink" title="2.1 mapping：text 还是 keyword"></a>2.1 mapping：text 还是 keyword</h3><p>这是面试手写 mapping 的基础：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>标题、案由、正文</td>
+<td><code>text</code></td>
+<td>需要分词、全文检索</td>
+</tr>
+<tr>
+<td>案号、法院、文书类型</td>
+<td><code>keyword</code></td>
+<td>精确匹配、聚合（terms）、排序（date）</td>
+</tr>
+<tr>
+<td>法院（既要分词又要精确）</td>
+<td>multi-fields</td>
+<td>主字段 <code>text</code> + 子字段 <code>.raw</code> 为 <code>keyword</code></td>
+</tr>
+<tr>
+<td>大字段只存不检索</td>
+<td><code>index: false</code></td>
+<td>不建倒排索引，省空间、省写入</td>
+</tr>
+</tbody></table>
+<div class="code-container" data-rel="Json"><figure class="iseeu highlight json"><table><tr><td class="code"><pre><span class="line">PUT /judgments_v1</span><br><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;mappings&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;properties&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">      <span class="attr">&quot;title&quot;</span><span class="punctuation">:</span>       <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;text&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;cause&quot;</span><span class="punctuation">:</span>       <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;text&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;content&quot;</span><span class="punctuation">:</span>     <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;text&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;case_no&quot;</span><span class="punctuation">:</span>     <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;keyword&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;doc_type&quot;</span><span class="punctuation">:</span>    <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;keyword&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;court&quot;</span><span class="punctuation">:</span>       <span class="punctuation">&#123;</span></span><br><span class="line">        <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;text&quot;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="attr">&quot;fields&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;raw&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;keyword&quot;</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span></span><br><span class="line">      <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;judgment_date&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;date&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;full_text&quot;</span><span class="punctuation">:</span>   <span class="punctuation">&#123;</span> <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;text&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;index&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">false</span></span> <span class="punctuation">&#125;</span></span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li><code>court.raw</code>：按法院名做 terms 聚合、精确筛选；</li>
+<li><code>full_text</code> 只存不索引：作为冗余存一份，避免回表取全文（或按业务取舍）。</li>
+</ul>
+<h3 id="2-2-分词器：法律领域的重点"><a href="#2-2-分词器：法律领域的重点" class="headerlink" title="2.2 分词器：法律领域的重点"></a>2.2 分词器：法律领域的重点</h3><p>默认 <code>standard</code> 分词器对中文是<strong>按单个汉字切</strong>，搜”表见代利”会碎成四段，检索基本报废。所以：</p>
+<ul>
+<li><strong>建索引时用 <code>ik_max_word</code></strong>：细粒度、穷举切分，<strong>保证召回</strong>；</li>
+<li><strong>查询时用 <code>ik_smart</code></strong>：粗粒度、尽量切成词，<strong>保证精度</strong>；</li>
+<li><strong>自定义法律词典</strong>：<code>表见代理</code>、<code>善意取得</code>、<code>不可抗力</code> 这种术语不配词典会被切碎；</li>
+<li><strong>同义词配置</strong>：如”原告 / 起诉人””被告 / 被上诉人”，提升召回。</li>
+</ul>
+<div class="code-container" data-rel="Xml"><figure class="iseeu highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="comment">&lt;!-- IKAnalyzer.cfg.xml：IK 自定义词典 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">entry</span> <span class="attr">key</span>=<span class="string">&quot;ext_dict&quot;</span>&gt;</span>custom/lawterm.dic<span class="tag">&lt;/<span class="name">entry</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">entry</span> <span class="attr">key</span>=<span class="string">&quot;remote_ext_dict&quot;</span>&gt;</span>http://config.host/ik/lawterm.dic<span class="tag">&lt;/<span class="name">entry</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br></pre></td></tr></table></figure></div>
+
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">表见代理</span><br><span class="line">善意取得</span><br><span class="line">不可抗力</span><br><span class="line">诉讼时效</span><br></pre></td></tr></table></figure></div>
+
+<p>mapping 上配 <code>analyzer</code> / <code>search_analyzer</code>：</p>
+<div class="code-container" data-rel="Json"><figure class="iseeu highlight json"><table><tr><td class="code"><pre><span class="line"><span class="attr">&quot;title&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;text&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;analyzer&quot;</span><span class="punctuation">:</span> <span class="string">&quot;ik_max_word&quot;</span><span class="punctuation">,</span>   <span class="comment">// 写索引：多切分，多召回</span></span><br><span class="line">  <span class="attr">&quot;search_analyzer&quot;</span><span class="punctuation">:</span> <span class="string">&quot;ik_smart&quot;</span> <span class="comment">// 查询：粗切分，更精准</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p>面试加分：<code>remote_ext_dict</code> 远程词典可以热更新业务词（新法条、简称），不用重启节点。</p>
+</blockquote>
+<h3 id="2-3-分片与索引策略"><a href="#2-3-分片与索引策略" class="headerlink" title="2.3 分片与索引策略"></a>2.3 分片与索引策略</h3><table>
+<thead>
+<tr>
+<th>策略</th>
+<th>做法</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单分片大小</td>
+<td>控制在 <strong>10~50G</strong></td>
+<td>太大迁移慢，太小分片碎片化</td>
+</tr>
+<tr>
+<td>副本数</td>
+<td>至少 1</td>
+<td>高可用 + 读扩展</td>
+</tr>
+<tr>
+<td>索引滚动</td>
+<td>按时间（如 <code>judgments-2026-10</code>）</td>
+<td>结合 ILM 冷热分离，旧索引降副本、转冷存储</td>
+</tr>
+<tr>
+<td>别名</td>
+<td>读写一律走 <code>alias</code></td>
+<td>重建索引时切换 alias 实现零停机</td>
+</tr>
+</tbody></table>
+<div class="code-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 对外查询统一走别名，reindex 后切别名</span></span><br><span class="line">curl -X POST <span class="string">&quot;localhost:9200/_aliases&quot;</span> -H <span class="string">&#x27;Content-Type: application/json&#x27;</span> -d <span class="string">&#x27;&#123;</span></span><br><span class="line"><span class="string">  &quot;actions&quot;: [</span></span><br><span class="line"><span class="string">    &#123; &quot;remove&quot;: &#123; &quot;index&quot;: &quot;judgments_v1&quot;, &quot;alias&quot;: &quot;judgments&quot; &#125; &#125;,</span></span><br><span class="line"><span class="string">    &#123; &quot;add&quot;:    &#123; &quot;index&quot;: &quot;judgments_v2&quot;, &quot;alias&quot;: &quot;judgments&quot; &#125; &#125;</span></span><br><span class="line"><span class="string">  ]</span></span><br><span class="line"><span class="string">&#125;&#x27;</span></span><br></pre></td></tr></table></figure></div>
+
+<h2 id="三、数据同步：binlog-→-Canal-→-Kafka-→-ES"><a href="#三、数据同步：binlog-→-Canal-→-Kafka-→-ES" class="headerlink" title="三、数据同步：binlog → Canal → Kafka → ES"></a>三、数据同步：binlog → Canal → Kafka → ES</h2><p>同步链路是这套架构最关键的环节：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">MySQL binlog</span><br><span class="line">   │ 伪装成 slave 订阅</span><br><span class="line">   ▼</span><br><span class="line">C a n a l（解析 binlog 变更事件）</span><br><span class="line">   │ 投递</span><br><span class="line">   ▼</span><br><span class="line">Kafka（按主键 hash 分区）</span><br><span class="line">   │ 消费</span><br><span class="line">   ▼</span><br><span class="line">ES upsert（_id = mysql_id）→ 最终一致</span><br></pre></td></tr></table></figure></div>
+
+<p>必须解决的四个问题：</p>
+<h3 id="3-1-顺序性"><a href="#3-1-顺序性" class="headerlink" title="3.1 顺序性"></a>3.1 顺序性</h3><p>同一行多次变更（insert → update → delete）必须<strong>有序</strong>执行，否则 ES 数据错乱。<br>做法：<strong>按主键 hash 选 partition</strong>，保证同一行的所有变更落在同一个 Kafka partition，partition 内天然有序。</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 伪代码：按主键哈希选分区，保证单行串行有序</span></span><br><span class="line"><span class="type">int</span> <span class="variable">partition</span> <span class="operator">=</span> Math.floorMod(mysqlId.hashCode(), topicPartitions);</span><br><span class="line">kafkaProducer.send(<span class="keyword">new</span> <span class="title class_">ProducerRecord</span>&lt;&gt;(topic, partition, mysqlId, binlogEvent));</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="3-2-幂等"><a href="#3-2-幂等" class="headerlink" title="3.2 幂等"></a>3.2 幂等</h3><p>Kafka <code>at-least-once</code> 场景下消息可能<strong>重复投递</strong>。做法是写 ES 时用 <code>mysql_id</code> 作为文档 <code>_id</code> 做 upsert——同一 id 重复写，结果一样，天然幂等：</p>
+<div class="code-container" data-rel="Json"><figure class="iseeu highlight json"><table><tr><td class="code"><pre><span class="line">POST /judgments/_doc/_bulk</span><br><span class="line"><span class="punctuation">&#123;</span> <span class="attr">&quot;index&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;_id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;102394&quot;</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#123;</span> <span class="attr">&quot;title&quot;</span><span class="punctuation">:</span> <span class="string">&quot;xx合同纠纷判决书&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;court&quot;</span><span class="punctuation">:</span> <span class="string">&quot;…&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;judgment_date&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2026-09-30&quot;</span> <span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure></div>
+
+<h3 id="3-3-全量-增量"><a href="#3-3-全量-增量" class="headerlink" title="3.3 全量 + 增量"></a>3.3 全量 + 增量</h3><p>系统初始化时先做一次<strong>全量导入</strong>，再把同步位点切到某个 binlog position 开始跑增量。<strong>位点必须持久化</strong>（DB 或 Redis），挂了重启能从断点续传，不能从当前最新消费导致丢失。</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">全量阶段：分页/游标从 MySQL 扫全量 → 写 ES</span><br><span class="line">增量阶段：记录 binlog 位点 → 从位点消费 → 每批提交后更新位点</span><br><span class="line">          （位点落盘/落库，重启后从上次进度恢复）</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="3-4-对账补偿-监控"><a href="#3-4-对账补偿-监控" class="headerlink" title="3.4 对账补偿 + 监控"></a>3.4 对账补偿 + 监控</h3><p>异步同步一定有短暂不一致：</p>
+<ul>
+<li><strong>定时对账</strong>：比对 MySQL 与 ES 的文档<strong>数量</strong>，抽样校验<strong>内容</strong>，发现不一致补偿重推；</li>
+<li><strong>lag 监控</strong>：binlog 消费位点与 MySQL 当前位点差超过阈值就告警；</li>
+<li><strong>删除处理</strong>：走逻辑删除，ES 里标记 <code>is_deleted</code>，查询时过滤。</li>
+</ul>
+<h2 id="四、查询链路：两阶段检索-回表"><a href="#四、查询链路：两阶段检索-回表" class="headerlink" title="四、查询链路：两阶段检索 + 回表"></a>四、查询链路：两阶段检索 + 回表</h2><p>链路：ES 搜索（只返回 id 列表）→ MySQL <code>WHERE id IN (...)</code> 批量查全量 → 按 ES 顺序组装返回。</p>
+<h3 id="4-1-避免-N-1"><a href="#4-1-避免-N-1" class="headerlink" title="4.1 避免 N+1"></a>4.1 避免 N+1</h3><p>不能拿到 id 后一条一条查 MySQL（N 次网络 RTT）。正确做法：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 1. ES 返回 id 列表（顺序即相关度排序）</span></span><br><span class="line">List&lt;Long&gt; ids = esSearchResult.getIds();       <span class="comment">// 例如 [3, 9, 1]</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 2. 一次批量查回（id 超过几百个就分批，每批 500）</span></span><br><span class="line">List&lt;Judgment&gt; rows = judgmentMapper.selectByIds(ids);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 3. 用 map 重排，保持 ES 返回顺序！</span></span><br><span class="line">Map&lt;Long, Judgment&gt; map =</span><br><span class="line">    rows.stream().collect(Collectors.toMap(Judgment::getId, Function.identity()));</span><br><span class="line">List&lt;Judgment&gt; ordered = ids.stream()</span><br><span class="line">    .map(map::get)</span><br><span class="line">    .filter(Objects::nonNull)</span><br><span class="line">    .collect(Collectors.toList());</span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p>注意：ES 返回顺序就是相关度排序，回表后<strong>必须用 map 按 ES 顺序重排</strong>，否则排序就丢了。</p>
+</blockquote>
+<h3 id="4-2-filter-和-query-分开"><a href="#4-2-filter-和-query-分开" class="headerlink" title="4.2 filter 和 query 分开"></a>4.2 <code>filter</code> 和 <code>query</code> 分开</h3><ul>
+<li>不需要算分的条件（法院、日期范围、文书类型、<code>is_deleted</code> 过滤），放 <strong><code>filter</code></strong>：不参与打分，<strong>可缓存</strong>，性能高；</li>
+<li>需要算相关性的关键词匹配，放 <strong><code>must</code></strong>。</li>
+</ul>
+<div class="code-container" data-rel="Json"><figure class="iseeu highlight json"><table><tr><td class="code"><pre><span class="line">POST /judgments/_search</span><br><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;bool&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">      <span class="attr">&quot;must&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">        <span class="punctuation">&#123;</span> <span class="attr">&quot;multi_match&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="string">&quot;表见代理 买卖合同&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;fields&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">&quot;title^3&quot;</span><span class="punctuation">,</span> <span class="string">&quot;cause^2&quot;</span><span class="punctuation">,</span> <span class="string">&quot;content&quot;</span><span class="punctuation">]</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span></span><br><span class="line">      <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;filter&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">        <span class="punctuation">&#123;</span> <span class="attr">&quot;term&quot;</span><span class="punctuation">:</span>   <span class="punctuation">&#123;</span> <span class="attr">&quot;doc_type&quot;</span><span class="punctuation">:</span> <span class="string">&quot;判决书&quot;</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="punctuation">&#123;</span> <span class="attr">&quot;term&quot;</span><span class="punctuation">:</span>   <span class="punctuation">&#123;</span> <span class="attr">&quot;is_deleted&quot;</span><span class="punctuation">:</span> <span class="literal"><span class="keyword">false</span></span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="punctuation">&#123;</span> <span class="attr">&quot;range&quot;</span><span class="punctuation">:</span>  <span class="punctuation">&#123;</span> <span class="attr">&quot;judgment_date&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;gte&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2023-01-01&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;lte&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2026-12-31&quot;</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">        <span class="punctuation">&#123;</span> <span class="attr">&quot;term&quot;</span><span class="punctuation">:</span>   <span class="punctuation">&#123;</span> <span class="attr">&quot;court.raw&quot;</span><span class="punctuation">:</span> <span class="string">&quot;XX市中级人民法院&quot;</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span></span><br><span class="line">      <span class="punctuation">]</span></span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;sort&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="punctuation">&#123;</span> <span class="attr">&quot;judgment_date&quot;</span><span class="punctuation">:</span> <span class="string">&quot;desc&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;size&quot;</span><span class="punctuation">:</span> <span class="number">20</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure></div>
+
+<h3 id="4-3-深分页：search-after-代替-from-size"><a href="#4-3-深分页：search-after-代替-from-size" class="headerlink" title="4.3 深分页：search_after 代替 from + size"></a>4.3 深分页：<code>search_after</code> 代替 <code>from + size</code></h3><p>ES 默认 <code>from + size</code> 上限 <strong>1 万条</strong>，再深就报错或内存爆炸。解决：</p>
+<ul>
+<li>分页深打 <code>from + size</code> 到一定深度直接限制（如第 100 页封顶）；</li>
+<li>更平滑的是 <strong><code>search_after</code> + 排序游标</strong>，像翻页书签一样往后翻，不依赖 from；</li>
+<li>产品上也可引导用户加筛选条件，减少总命中量。</li>
+</ul>
+<div class="code-container" data-rel="Json"><figure class="iseeu highlight json"><table><tr><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;bool&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;must&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;match&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;content&quot;</span><span class="punctuation">:</span> <span class="string">&quot;表见代理&quot;</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span> <span class="punctuation">]</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;sort&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;judgment_date&quot;</span><span class="punctuation">:</span> <span class="string">&quot;desc&quot;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;_id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;asc&quot;</span> <span class="punctuation">&#125;</span> <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;size&quot;</span><span class="punctuation">:</span> <span class="number">20</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;search_after&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span> <span class="string">&quot;2026-09-30&quot;</span><span class="punctuation">,</span> <span class="number">1023941</span> <span class="punctuation">]</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p>面试一句话：<code>search_after</code> 本质是”游标”+ 排序值，每次把上次最后一条的排序值带进来继续翻，天然避免横向跳过大量文档。</p>
+</blockquote>
+<h3 id="4-4-相关性排序"><a href="#4-4-相关性排序" class="headerlink" title="4.4 相关性排序"></a>4.4 相关性排序</h3><ul>
+<li><strong>BM25 打底</strong>（ES7+ 默认，词频、文档长度归一化内置）；</li>
+<li><strong><code>multi_match</code> 给字段 boost</strong>：标题权重 &gt; 案由 &gt; 正文；</li>
+<li><strong><code>function_score</code> 结合裁判时间</strong>：<code>gauss</code> 让新文书轻微靠前；</li>
+<li><strong><code>highlight</code></strong> 返回命中片段给前端标红。</li>
+</ul>
+<div class="code-container" data-rel="Json"><figure class="iseeu highlight json"><table><tr><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;function_score&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">      <span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;multi_match&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="string">&quot;表见代理&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;fields&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">&quot;title^3&quot;</span><span class="punctuation">,</span> <span class="string">&quot;cause^2&quot;</span><span class="punctuation">,</span> <span class="string">&quot;content&quot;</span><span class="punctuation">]</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;functions&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">        <span class="punctuation">&#123;</span> <span class="attr">&quot;gauss&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;judgment_date&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;origin&quot;</span><span class="punctuation">:</span> <span class="string">&quot;now&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;scale&quot;</span><span class="punctuation">:</span> <span class="string">&quot;30d&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;decay&quot;</span><span class="punctuation">:</span> <span class="number">0.5</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span></span><br><span class="line">      <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">      <span class="attr">&quot;score_mode&quot;</span><span class="punctuation">:</span> <span class="string">&quot;sum&quot;</span></span><br><span class="line">    <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">&#125;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;highlight&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;fields&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span> <span class="attr">&quot;content&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span><span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span> <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure></div>
+
+<h2 id="五、兜底与监控"><a href="#五、兜底与监控" class="headerlink" title="五、兜底与监控"></a>五、兜底与监控</h2><table>
+<thead>
+<tr>
+<th>可靠性问题</th>
+<th>方案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ES 挂掉 / 集群不可用</td>
+<td>降级：按案号走 MySQL <code>=</code> 精确查询，保证核心入口不挂</td>
+</tr>
+<tr>
+<td>索引结构要改（换 mapping）</td>
+<td>新索引 + <code>_reindex</code> + 切换别名，零停机</td>
+</tr>
+<tr>
+<td>mapping 字段类型不可改</td>
+<td>新索引重建，别名对用户透明</td>
+</tr>
+<tr>
+<td>同步延后</td>
+<td>lag 告警 + 对账补偿，补偿重推</td>
+</tr>
+<tr>
+<td>ES 慢查询</td>
+<td>慢查询日志、监控耗时分布、大分页拦截</td>
+</tr>
+<tr>
+<td>集群健康</td>
+<td>监控红黄状态、分片未分配、段数量</td>
+</tr>
+</tbody></table>
+<h2 id="六、总结：三句话背下来"><a href="#六、总结：三句话背下来" class="headerlink" title="六、总结：三句话背下来"></a>六、总结：三句话背下来</h2><ol>
+<li><strong>索引设计要贴合业务分词</strong>——<code>text</code>/<code>keyword</code> 选对、IK + 法律词典、分片副本与别名；</li>
+<li><strong>数据同步保顺序、保幂等、能对账</strong>——hash 分区 + <code>_id</code> upsert + binlog 位点持久化 + 定时对账；</li>
+<li><strong>查询链路控好回表和深分页</strong>——批量 <code>IN</code> 回表、<code>filter</code> 缓存、<code>search_after</code>、BM25 + 字段 boost。</li>
+</ol>
+<p>这套”ES 只搜、MySQL 只存”的思路，不只适用于法律文书，<strong>法院案例库、合同库、知识库全文检索</strong>都可以直接复用。</p>
+<h2 id="7-常见面试题（背这组）"><a href="#7-常见面试题（背这组）" class="headerlink" title="7. 常见面试题（背这组）"></a>7. 常见面试题（背这组）</h2><table>
+<thead>
+<tr>
+<th>问题</th>
+<th>一句话答案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>为什么用 MySQL + ES 两套？</td>
+<td>MySQL 保强一致/事务/低成本存储，ES 提高全文检索性能，职责拆分</td>
+</tr>
+<tr>
+<td>为什么不全存 ES？</td>
+<td>ES 非事务、更新贵、存储贵，法律文书强一致必须落 MySQL</td>
+</tr>
+<tr>
+<td>ES 只存哪些字段？</td>
+<td>检索相关字段：title、cause、content、court、judgment_date</td>
+</tr>
+<tr>
+<td>数据怎么进 ES？</td>
+<td>Canal 伪装 slave 消费 binlog → Kafka → 消费写入 ES，秒级最终一致</td>
+</tr>
+<tr>
+<td>同步乱序怎么办？</td>
+<td>主键 hash 分区，同一 id 一行落同一 partition，天然有序</td>
+</tr>
+<tr>
+<td>重复消费怎么办？</td>
+<td><code>mysql_id</code> 作为 <code>_id</code> upsert，重复投递不产生脏数据</td>
+</tr>
+<tr>
+<td>全量 + 增量怎么写？</td>
+<td>先全量，再持化 binlog 位点增量，断点续传</td>
+</tr>
+<tr>
+<td>异步同步不一致怎么办？</td>
+<td>定时对账（数量 + 内容）+ lag 告警 + 补偿</td>
+</tr>
+<tr>
+<td><code>LIKE &#39;%x%&#39;</code> 为什么慢？</td>
+<td>无法走索引，全表扫描；ES 倒排索引是搜索的正解</td>
+</tr>
+<tr>
+<td>回表 N+1 怎么避免？</td>
+<td>拿 id 后 <code>WHERE id IN</code> 一次批量查，map 重排保顺序</td>
+</tr>
+<tr>
+<td><code>filter</code> vs <code>must</code>？</td>
+<td>都要求命中；filter 不算分、可缓存，must 参与算分</td>
+</tr>
+<tr>
+<td>深分页超 1 万的解法？</td>
+<td><code>search_after</code> + 排序游标；页面限制 / 加筛选</td>
+</tr>
+<tr>
+<td>排序怎么让新的靠前</td>
+<td><code>function_score</code> 配日期 gauss 衰减</td>
+</tr>
+<tr>
+<td>文书关键词被拆碎？</td>
+<td>配 IK 法律词典 / 同义词；<code>ik_smart</code> 查询、<code>ik_max_word</code> 索引</td>
+</tr>
+<tr>
+<td>删除怎么做？</td>
+<td>逻辑删除 <code>is_deleted</code>，同步与查询过滤统一处理</td>
+</tr>
+<tr>
+<td>ES 挂了大影响？</td>
+<td>降级 MySQL <code>=</code> 精确查案号，保证可用性</td>
+</tr>
+</tbody></table>
+<h2 id="8-自测三问"><a href="#8-自测三问" class="headerlink" title="8. 自测三问"></a>8. 自测三问</h2><ol>
+<li>检索”北京法院近三年的民事判决书中包含’善意取得’”，从 ES 两阶段查询到 MySQL 回表的完整链路应该怎么走？</li>
+<li>binlog → Kafka → ES 在”同一行 update 了 3 次、消费进程中途重启”的情况下，怎么保证 ES 最终一致且不重复不丢？</li>
+<li>线上 ES 里查出的标题排序和 MySQL 回表后顺序乱了，可能是什么原因？怎么修复？</li>
+</ol>
+<hr>
+<blockquote>
+<p>下一篇预告：可以复习「缓存与数据库一致性（双写 / 延迟双删）」或「Redis 分布式锁」，都是检索类系统最容易连环考的点。</p>
+</blockquote>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day12：法律文书检索系统ES与MySQL混合架构</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-10-08 17:05:17</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-10-08 17:05:17
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/10/08/复习知识点Day12-法律文书检索系统ES与MySQL混合架构/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
+</div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%9D%A2%E8%AF%95/">#面试</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/MySQL/">#MySQL</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">#复习知识点</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Elasticsearch/">#Elasticsearch</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/ES/">#ES</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E6%90%9C%E7%B4%A2/">#搜索</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/">#系统设计</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Canal/">#Canal</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/09/30/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day11-MQ%E9%A1%BA%E5%BA%8F%E5%8F%AF%E9%9D%A0%E4%B8%8E%E5%BB%B6%E8%BF%9F/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day11：MQ顺序可靠与延迟</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
+	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day12：法律文书检索系统ES与MySQL混合架构</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%88%E8%AF%B4%E7%BB%93%E8%AE%BA%EF%BC%9A%E6%95%B4%E4%B8%AA%E6%96%B9%E6%A1%88%E5%B0%B1%E6%98%AF%E4%B8%80%E7%BB%84%E6%9D%83%E8%A1%A1"><span class="nav-text">先说结论：整个方案就是一组权衡</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E8%83%8C%E6%99%AF%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E8%83%BD%E5%8F%AA%E9%9D%A0-MySQL-%E6%A3%80%E7%B4%A2"><span class="nav-text">一、背景：为什么不能只靠 MySQL 检索</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E5%B9%B2%E8%84%86%E5%85%A8%E5%AD%98-ES"><span class="nav-text">为什么不干脆全存 ES</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81%E7%B4%A2%E5%BC%95%E8%AE%BE%E8%AE%A1%EF%BC%9A%E4%B8%89%E5%A4%A7%E5%9D%97"><span class="nav-text">二、索引设计：三大块</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-mapping%EF%BC%9Atext-%E8%BF%98%E6%98%AF-keyword"><span class="nav-text">2.1 mapping：text 还是 keyword</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%88%86%E8%AF%8D%E5%99%A8%EF%BC%9A%E6%B3%95%E5%BE%8B%E9%A2%86%E5%9F%9F%E7%9A%84%E9%87%8D%E7%82%B9"><span class="nav-text">2.2 分词器：法律领域的重点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E5%88%86%E7%89%87%E4%B8%8E%E7%B4%A2%E5%BC%95%E7%AD%96%E7%95%A5"><span class="nav-text">2.3 分片与索引策略</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81%E6%95%B0%E6%8D%AE%E5%90%8C%E6%AD%A5%EF%BC%9Abinlog-%E2%86%92-Canal-%E2%86%92-Kafka-%E2%86%92-ES"><span class="nav-text">三、数据同步：binlog → Canal → Kafka → ES</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E9%A1%BA%E5%BA%8F%E6%80%A7"><span class="nav-text">3.1 顺序性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%B9%82%E7%AD%89"><span class="nav-text">3.2 幂等</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%85%A8%E9%87%8F-%E5%A2%9E%E9%87%8F"><span class="nav-text">3.3 全量 + 增量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E5%AF%B9%E8%B4%A6%E8%A1%A5%E5%81%BF-%E7%9B%91%E6%8E%A7"><span class="nav-text">3.4 对账补偿 + 监控</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81%E6%9F%A5%E8%AF%A2%E9%93%BE%E8%B7%AF%EF%BC%9A%E4%B8%A4%E9%98%B6%E6%AE%B5%E6%A3%80%E7%B4%A2-%E5%9B%9E%E8%A1%A8"><span class="nav-text">四、查询链路：两阶段检索 + 回表</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E9%81%BF%E5%85%8D-N-1"><span class="nav-text">4.1 避免 N+1</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-filter-%E5%92%8C-query-%E5%88%86%E5%BC%80"><span class="nav-text">4.2 filter 和 query 分开</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E6%B7%B1%E5%88%86%E9%A1%B5%EF%BC%9Asearch-after-%E4%BB%A3%E6%9B%BF-from-size"><span class="nav-text">4.3 深分页：search_after 代替 from + size</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E7%9B%B8%E5%85%B3%E6%80%A7%E6%8E%92%E5%BA%8F"><span class="nav-text">4.4 相关性排序</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81%E5%85%9C%E5%BA%95%E4%B8%8E%E7%9B%91%E6%8E%A7"><span class="nav-text">五、兜底与监控</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81%E6%80%BB%E7%BB%93%EF%BC%9A%E4%B8%89%E5%8F%A5%E8%AF%9D%E8%83%8C%E4%B8%8B%E6%9D%A5"><span class="nav-text">六、总结：三句话背下来</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%88%E8%83%8C%E8%BF%99%E7%BB%84%EF%BC%89"><span class="nav-text">7. 常见面试题（背这组）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E8%87%AA%E6%B5%8B%E4%B8%89%E9%97%AE"><span class="nav-text">8. 自测三问</span></a></li></ol>
+
+	</div>
+</div>
+	</div>
+	
+</div>
+
+			</div>
+
+			
+		</div>
+
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2017</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">Percy jie</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 22 篇文章
+                    </span>
+                    
+                        <span>
+                            共 46k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
+
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
+	
+
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>

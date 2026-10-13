@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="AI, Java, Security, Blog">
+    
+    
+    <meta name="author" content="Percy jie">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://percyjie.github.io/2026/10/13/单体拆微服务与ddd核心思想/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="单体拆微服务：拆分思路、DDD 核心思想与贫血&#x2F;充血模型的取舍">
+<meta property="og:url" content="https://percyjie.github.io/2026/10/13/%E5%8D%95%E4%BD%93%E6%8B%86%E5%BE%AE%E6%9C%8D%E5%8A%A1%E4%B8%8EDDD%E6%A0%B8%E5%BF%83%E6%80%9D%E6%83%B3/index.html">
+<meta property="og:site_name" content="Percy&#39;s Note">
+<meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-10-13T08:39:13.000Z">
+<meta property="article:modified_time" content="2026-10-13T08:39:13.000Z">
+<meta property="article:author" content="Percy jie">
+<meta property="article:tag" content="DDD">
+<meta property="article:tag" content="充血模型">
+<meta property="article:tag" content="微服务">
+<meta property="article:tag" content="架构">
+<meta property="article:tag" content="系统设计">
+<meta property="article:tag" content="领域驱动设计">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            单体拆微服务：拆分思路、DDD 核心思想与贫血/充血模型的取舍 | Percy&#39;s Note
+        
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"percyjie.github.io","root":"/","language":"zh-CN"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"vs2015"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/redefine-og.webp","description":"人没有梦想，和咸鱼有什么分别"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Percy's Note","subtitle":{"text":["人没有梦想，和咸鱼有什么分别"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"default","links":[{"icon":"fa-brands fa-github","url":"https://github.com/percyjie"},{"icon":"fa-brands fa-weibo","url":"https://weibo.com/panjie0709"},{"icon":null,"url":null},{"icon":null,"url":null},{"icon":null,"url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"cloud","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":{"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}}},"article_date_format":"auto","excerpt_length":200,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart fa-beat\" style=\"--fa-animation-duration: 0.5s; color: #f54545\"></i>","start":"2017/03/08 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2017/03/08 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                Percy&#39;s Note
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/tags"
+                                        >
+                                    <i class="fa-regular fa-tags fa-fw"></i>
+                                    标签
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/tags"
+                        >
+                            <span>
+                                标签
+                            </span>
+                            
+                                <i class="fa-regular fa-tags fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">83</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">11</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">26</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+
+			<div class="main-content">
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
+
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">单体拆微服务：拆分思路、DDD 核心思想与贫血/充血模型的取舍</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv3</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-10-13 16:39:13</span>
+        <span class="mobile">2026-10-13 16:39:13</span>
+        <span class="hover-info">创建</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-10-13 16:39:13</span>
+            <span class="mobile">2026-10-13 16:39:13</span>
+            <span class="hover-info">更新</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/%E6%9E%B6%E6%9E%84/">架构</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/">系统设计</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/">微服务</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/DDD/">DDD</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E9%A2%86%E5%9F%9F%E9%A9%B1%E5%8A%A8%E8%AE%BE%E8%AE%A1/">领域驱动设计</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E6%9E%B6%E6%9E%84/">架构</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%85%85%E8%A1%80%E6%A8%A1%E5%9E%8B/">充血模型</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>6.3k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>22 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>「单体拆微服务」是面试和落地都绕不开的话题。很多人第一反应是「按模块拆」，结果拆完发现：服务之间互相调用几十跳、改一个字段要一起发版、跨库事务对不上账——这就是典型的<strong>分布式单体</strong>。这篇文章把三件事串起来讲清楚：<strong>单体到底按什么思路拆</strong>、<strong>DDD 的核心思想是什么</strong>、<strong>贫血模型和充血模型该怎么取舍</strong>。</p>
+</blockquote>
+<h2 id="先说结论"><a href="#先说结论" class="headerlink" title="先说结论"></a>先说结论</h2><p>先用一张表把全文的结论摆出来，后面再展开：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>什么时候拆</td>
+<td>组织上多团队互相阻塞、业务上模块的变更频率/伸缩要求差异巨大、单体已经难以构建部署——三条至少中一条</td>
+</tr>
+<tr>
+<td>按什么拆</td>
+<td><strong>按业务能力/子域垂直切</strong>（即限界上下文），不要按 controller/service/dao 技术层横着切</td>
+</tr>
+<tr>
+<td>怎么落地</td>
+<td>绞杀者模式渐进迁移：模块化单体 → 抽接口与防腐层 → 拆读侧服务 → 拆数据 → 治理</td>
+</tr>
+<tr>
+<td>难点在哪</td>
+<td>不在应用代码，而在<strong>数据归属</strong>和<strong>跨服务一致性</strong></td>
+</tr>
+<tr>
+<td>DDD 是什么</td>
+<td>一套「让代码结构与业务概念对齐、用边界管理复杂度」的建模方法论，核心是<strong>通用语言 + 限界上下文</strong></td>
+</tr>
+<tr>
+<td>贫血/充血怎么选</td>
+<td><strong>核心域用充血，支撑域/通用域用贫血</strong>；不要一刀切，也不要为了「纯粹」而充血</td>
+</tr>
+</tbody></table>
+<p>一句话概括：<strong>拆微服务的本质是拆边界，而划分边界最靠谱的工具就是 DDD；充血/贫血只是边界划好之后，模型内部要不要内聚业务规则的选择题。</strong></p>
+<h2 id="01-先问自己：为什么拆？不拆行不行？"><a href="#01-先问自己：为什么拆？不拆行不行？" class="headerlink" title="01 先问自己：为什么拆？不拆行不行？"></a>01 先问自己：为什么拆？不拆行不行？</h2><p>拆微服务是手段，不是目的。很多人只看到了收益，没算过成本：</p>
+<table>
+<thead>
+<tr>
+<th>你以为的收益</th>
+<th>真实代价</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>独立部署、独立发版</td>
+<td>换来分布式复杂度：链路追踪、分布式事务、跨服务排查</td>
+</tr>
+<tr>
+<td>技术栈自由</td>
+<td>团队维护成本、平台建设成本上升</td>
+</tr>
+<tr>
+<td>团队自治</td>
+<td>需要契约治理、SLA、监控告警等一整套基础设施兜底</td>
+</tr>
+<tr>
+<td>独立扩容</td>
+<td>大多数系统的瓶颈在<strong>数据库</strong>，拆应用并不解决</td>
+</tr>
+</tbody></table>
+<p>所以先做三道判断题：</p>
+<ol>
+<li><strong>组织维度</strong>：是不是有多个团队在同一个代码库里互相阻塞、排队等发版？</li>
+<li><strong>业务维度</strong>：是不是不同模块的变更频率、可用性等级、伸缩需求差异巨大？（比如秒杀模块和后台报表）</li>
+<li><strong>工程维度</strong>：单体的构建、部署、回归测试是不是已经慢到影响交付？</li>
+</ol>
+<p>三条都不成立，<strong>先别拆</strong>，把单体做成「模块化单体」（Modular Monolith）往往收益更高：边界清晰、模块内高内聚，但依然是一个进程、一个数据库，没有分布式成本。</p>
+<blockquote>
+<p><strong>康威定律</strong>：系统架构会映射组织的沟通结构。所以拆分的粒度最终是由<strong>团队边界</strong>决定的——一个服务如果找不到一个团队对它负责，它迟早会变成没人管的孤儿服务。</p>
+</blockquote>
+<h2 id="02-拆分的总体思路：五步走"><a href="#02-拆分的总体思路：五步走" class="headerlink" title="02 拆分的总体思路：五步走"></a>02 拆分的总体思路：五步走</h2><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">① 现状梳理  →  ② 边界识别  →  ③ 拆分设计  →  ④ 数据拆分  →  ⑤ 治理与演进</span><br><span class="line">   (看清依赖)     (DDD 划边界)    (绞杀者模式)    (最难的 30%)    (长期)</span><br></pre></td></tr></table></figure></div>
+
+<p>每一步的关键动作和产出物：</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>关键动作</th>
+<th>产出物</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>① 现状梳理</td>
+<td>业务能力地图、代码依赖分析、调用链、数据依赖、变更频率</td>
+<td>依赖矩阵、候选边界清单</td>
+</tr>
+<tr>
+<td>② 边界识别</td>
+<td>用 DDD 找子域与限界上下文，做上下文映射</td>
+<td>上下文地图（Context Map）</td>
+</tr>
+<tr>
+<td>③ 拆分设计</td>
+<td>定粒度、定优先级、定迁移方式（绞杀者/分支抽象）</td>
+<td>拆分路线图、服务清单</td>
+</tr>
+<tr>
+<td>④ 数据拆分</td>
+<td>单一写入者、共享表治理、最终一致方案</td>
+<td>数据归属表、同步方案</td>
+</tr>
+<tr>
+<td>⑤ 治理演进</td>
+<td>契约版本、可观测、熔断限流、一致性兜底</td>
+<td>平台能力、治理规范</td>
+</tr>
+</tbody></table>
+<h3 id="第-1-步：现状梳理（别跳过）"><a href="#第-1-步：现状梳理（别跳过）" class="headerlink" title="第 1 步：现状梳理（别跳过）"></a>第 1 步：现状梳理（别跳过）</h3><p>拆之前一定要有事实依据，而不是拍脑袋。至少收集这几类信息：</p>
+<ul>
+<li><strong>业务能力地图</strong>：按价值链列出用户域、商品域、交易域、履约域、结算域……</li>
+<li><strong>代码依赖矩阵</strong>：模块之间谁依赖谁，有没有循环依赖（循环依赖往往就是边界划错的信号）。</li>
+<li><strong>运行时调用链</strong>：用 APM 画出服务拓扑、热点接口、慢 SQL。</li>
+<li><strong>数据依赖</strong>：每张表被哪些模块读写——<strong>这是整个拆分里最难的部分</strong>。</li>
+<li><strong>变更频率</strong>：用 <code>git log</code> 按目录统计提交频率，高频变动的模块优先隔离。</li>
+</ul>
+<p>一个简化的依赖矩阵长这样（<code>√</code> 表示有依赖）：</p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>用户</th>
+<th>商品</th>
+<th>订单</th>
+<th>库存</th>
+<th>支付</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>用户</td>
+<td>—</td>
+<td></td>
+<td>√</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>商品</td>
+<td></td>
+<td>—</td>
+<td></td>
+<td>√</td>
+<td></td>
+</tr>
+<tr>
+<td>订单</td>
+<td>√</td>
+<td>√</td>
+<td>—</td>
+<td>√</td>
+<td>√</td>
+</tr>
+<tr>
+<td>库存</td>
+<td></td>
+<td>√</td>
+<td>√</td>
+<td>—</td>
+<td></td>
+</tr>
+<tr>
+<td>支付</td>
+<td>√</td>
+<td></td>
+<td>√</td>
+<td></td>
+<td>—</td>
+</tr>
+</tbody></table>
+<p>一眼就能看出：<strong>订单模块被最多模块依赖，也依赖最多模块</strong>——它天然是「交易上下文」的核心，拆的时候要格外小心事务边界。</p>
+<h3 id="第-2-步：识别边界——用-DDD-的限界上下文"><a href="#第-2-步：识别边界——用-DDD-的限界上下文" class="headerlink" title="第 2 步：识别边界——用 DDD 的限界上下文"></a>第 2 步：识别边界——用 DDD 的限界上下文</h3><p>这一步直接决定成败，原理见第 04 章。简单说：<strong>不要按「表」或「类」去切，要按「业务能力 + 模型边界」去切。</strong></p>
+<h3 id="第-3-步：拆分设计与优先级"><a href="#第-3-步：拆分设计与优先级" class="headerlink" title="第 3 步：拆分设计与优先级"></a>第 3 步：拆分设计与优先级</h3><ul>
+<li><strong>从最容易切的开始试点</strong>：低耦合、低流量、边缘功能（比如消息推送、文件服务），先跑通「独立部署 + 独立发布 + 监控」这套流程。</li>
+<li><strong>绞杀者模式（Strangler Fig）</strong>：新老逻辑并行，网关按流量比例/用户维度切流，新服务稳定后逐步放大，最后下线老逻辑。</li>
+<li><strong>分支抽象（Branch by Abstraction）</strong>：先在单体里抽出接口，接口实现可以从「本地调用」换成「RPC 调用」，代码结构不用大改。</li>
+<li><strong>优先拆读多写少、无事务共享的模块</strong>；写侧和强事务耦合的部分<strong>最后再拆</strong>，或者先只做「模块化」不做「服务化」。</li>
+<li><strong>难切的先留着</strong>：不要为了「拆而拆」。一个拆不好会带来分布式事务的服务，不如继续留在单体里。</li>
+</ul>
+<h3 id="第-4-步：数据拆分（真正的难点）"><a href="#第-4-步：数据拆分（真正的难点）" class="headerlink" title="第 4 步：数据拆分（真正的难点）"></a>第 4 步：数据拆分（真正的难点）</h3><p>应用代码拆开很容易，数据拆开才是成本大头。推荐一个渐进路径：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">逻辑分表（同库不同表，明确归属）</span><br><span class="line">   → 独立 Schema（同实例不同库，禁止跨库 JOIN）</span><br><span class="line">   → 独立数据库（独立实例，只能通过 API/MQ 交互）</span><br><span class="line">   → 独立存储（按需换 MySQL / ES / Redis / 数仓）</span><br></pre></td></tr></table></figure></div>
+
+<p><strong>共享表怎么处理</strong>：核心原则是「<strong>单一写入者</strong>」（Single Writer）——一张表只允许一个服务写，其他服务要么通过 API 查询，要么订阅变更事件维护自己的只读副本。</p>
+<p><strong>跨服务一致性怎么保证</strong>，按优先级排序：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>一致性</th>
+<th>适用场景</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>本地事务</td>
+<td>强一致</td>
+<td>同一服务内</td>
+<td>首选，能不出服务就不出</td>
+</tr>
+<tr>
+<td>2PC / XA</td>
+<td>强一致</td>
+<td>极少数强约束场景</td>
+<td>性能差、可用性差，<strong>不推荐</strong></td>
+</tr>
+<tr>
+<td>TCC</td>
+<td>最终一致</td>
+<td>资金类、可补偿的业务</td>
+<td>成本高，核心链路才用</td>
+</tr>
+<tr>
+<td>本地消息表 / 事务消息</td>
+<td>最终一致</td>
+<td>绝大多数跨服务场景</td>
+<td><strong>推荐默认方案</strong></td>
+</tr>
+<tr>
+<td>对账 + 补偿任务</td>
+<td>最终一致兜底</td>
+<td>所有涉及钱的场景</td>
+<td>必须要有，是最后防线</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>记住一句话：<strong>分布式环境下不要追求强一致，要追求「最终一致 + 可对账 + 可补偿」。</strong></p>
+</blockquote>
+<p><strong>跨服务查询</strong>：不要用「服务 A 调 B、B 调 C」拼数据，那样响应时间和故障率会指数级上升。优先用 API 组合（BFF 层聚合）、CQRS 读模型或宽表（用事件同步出一张查询专用的宽表）。</p>
+<h3 id="第-5-步：治理与演进"><a href="#第-5-步：治理与演进" class="headerlink" title="第 5 步：治理与演进"></a>第 5 步：治理与演进</h3><p>拆完之后才是真正的开始：</p>
+<ul>
+<li><strong>契约治理</strong>：接口版本化、向后兼容、契约测试（Consumer-Driven Contract）。</li>
+<li><strong>可观测性</strong>：TraceId 贯穿全链路，日志/指标/告警三件套。</li>
+<li><strong>稳定性</strong>：熔断、限流、降级、超时、重试（重试必须配合幂等）、死信队列。</li>
+<li><strong>一致性兜底</strong>：幂等键、状态机、定时对账、人工补偿入口。</li>
+</ul>
+<h2 id="03-按什么维度切？五个可用依据（附反例）"><a href="#03-按什么维度切？五个可用依据（附反例）" class="headerlink" title="03 按什么维度切？五个可用依据（附反例）"></a>03 按什么维度切？五个可用依据（附反例）</h2><table>
+<thead>
+<tr>
+<th>切分依据</th>
+<th>说明</th>
+<th>例子</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>业务能力 / 子域</strong>（推荐）</td>
+<td>按业务垂直切分</td>
+<td>订单、库存、支付</td>
+<td>需要一定的领域建模能力</td>
+</tr>
+<tr>
+<td>变更频率</td>
+<td>把高频变动的隔离出去</td>
+<td>营销规则引擎</td>
+<td>边界容易漂移</td>
+</tr>
+<tr>
+<td>数据所有权</td>
+<td>按数据归属切</td>
+<td>用户主数据</td>
+<td>需先理清数据依赖</td>
+</tr>
+<tr>
+<td>团队边界（康威）</td>
+<td>一个团队一个服务</td>
+<td>按小组划分</td>
+<td>组织调整会导致架构抖动</td>
+</tr>
+<tr>
+<td>技术分层（<strong>不推荐</strong>）</td>
+<td>按 controller/service/dao 切</td>
+<td>用户-Controller 服务</td>
+<td>直接产出分布式单体</td>
+</tr>
+</tbody></table>
+<h3 id="反模式：分布式单体（Distributed-Monolith）"><a href="#反模式：分布式单体（Distributed-Monolith）" class="headerlink" title="反模式：分布式单体（Distributed Monolith）"></a>反模式：分布式单体（Distributed Monolith）</h3><p>拆了进程，没拆边界。判断信号：</p>
+<ol>
+<li>多个服务<strong>共享同一张表</strong>或同一个数据库实例；</li>
+<li>服务之间<strong>同步调用链很长</strong>（A→B→C→D→E），一个慢全链路慢；</li>
+<li>改一个需求要<strong>同时发布多个服务</strong>；</li>
+<li>服务之间共享 DTO/公共库，公共库一改全员升级；</li>
+<li>出了故障<strong>无法定位</strong>是哪个服务的责任。</li>
+</ol>
+<p>只要中了两条以上，说明这次拆分基本白拆——<strong>它只是把单体的复杂度从「代码内」搬到了「网络上」，还额外增加了运维成本。</strong></p>
+<h2 id="04-DDD-的核心思想到底是什么"><a href="#04-DDD-的核心思想到底是什么" class="headerlink" title="04 DDD 的核心思想到底是什么"></a>04 DDD 的核心思想到底是什么</h2><p>一句话：<strong>DDD（Domain-Driven Design，领域驱动设计）是把「业务领域知识」翻译成「软件模型」的一套方法，核心目标是让代码结构与业务概念一一对应，并用「边界」来管理复杂度。</strong></p>
+<p>它分三个层次，理解顺序就是从外到内：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">通用语言（大家说同一套词）</span><br><span class="line">    ↓</span><br><span class="line">战略设计（划边界：子域、限界上下文、上下文映射）  ← 拆微服务主要用这层</span><br><span class="line">    ↓</span><br><span class="line">战术设计（建模型：实体、值对象、聚合、领域事件、仓储）  ← 写代码主要用这层</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="4-1-通用语言（Ubiquitous-Language）"><a href="#4-1-通用语言（Ubiquitous-Language）" class="headerlink" title="4.1 通用语言（Ubiquitous Language）"></a>4.1 通用语言（Ubiquitous Language）</h3><p><strong>业务方、产品、开发、测试说同一套词，代码里也用这套词命名。</strong></p>
+<ul>
+<li>正例：<code>Order.pay()</code>、<code>Inventory.lock()</code>、<code>Coupon.calculateDiscount()</code>。</li>
+<li>反例：<code>doProcess()</code>、<code>handleData()</code>、<code>status = 1 / 2 / 3</code>（谁能记住 3 是已取消还是已超时？）。</li>
+</ul>
+<p>通用语言是 DDD 的<strong>地基</strong>。没有它，所谓「领域模型」就是一群自己发明的类名，业务方看不懂，改需求时还是会失真。</p>
+<h3 id="4-2-领域与子域：把精力花在刀刃上"><a href="#4-2-领域与子域：把精力花在刀刃上" class="headerlink" title="4.2 领域与子域：把精力花在刀刃上"></a>4.2 领域与子域：把精力花在刀刃上</h3><p>整个业务领域可以拆成子域，按重要程度分三类：</p>
+<table>
+<thead>
+<tr>
+<th>子域类型</th>
+<th>含义</th>
+<th>投入策略</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>核心域</strong></td>
+<td>公司的核心竞争力所在</td>
+<td>自研 + 最强人力 + <strong>充血模型</strong> + 精雕细琢</td>
+</tr>
+<tr>
+<td><strong>支撑域</strong></td>
+<td>支撑核心业务但无差异化</td>
+<td>自研或外包，够用就行，<strong>贫血模型</strong></td>
+</tr>
+<tr>
+<td><strong>通用域</strong></td>
+<td>行业通用能力</td>
+<td>直接买/用开源（认证、支付网关、短信），<strong>贫血模型</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>这条太重要了：<strong>不是所有模块都值得做 DDD 建模。</strong> 把通用域也拿来认真建模，就是典型的过度设计。</p>
+</blockquote>
+<h3 id="4-3-限界上下文（Bounded-Context）——-最重要的抓手"><a href="#4-3-限界上下文（Bounded-Context）——-最重要的抓手" class="headerlink" title="4.3 限界上下文（Bounded Context）—— 最重要的抓手"></a>4.3 限界上下文（Bounded Context）—— 最重要的抓手</h3><p><strong>限界上下文 = 一个模型能成立的边界。</strong> 在边界内，术语的含义是明确且唯一的；出了边界，同一个词可能完全不是一回事。</p>
+<p>经典例子——「商品」这个词：</p>
+<table>
+<thead>
+<tr>
+<th>上下文</th>
+<th>「商品」的含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>商品上下文</td>
+<td>有标题、详情、类目、上下架状态，关注<strong>展示与检索</strong></td>
+</tr>
+<tr>
+<td>交易上下文</td>
+<td>有价格、优惠、库存快照，关注<strong>下单与结算</strong></td>
+</tr>
+<tr>
+<td>履约上下文</td>
+<td>有重量、体积、发货地，关注<strong>物流与配送</strong></td>
+</tr>
+</tbody></table>
+<p>如果在整个系统里只用一个 <code>Product</code> 类，就必然出现「字段越来越多、每个模块只用一部分、改一处影响一片」的局面——<strong>这正是单体腐化的根源</strong>。</p>
+<p>所以：<strong>一个限界上下文，通常就是一个微服务的边界。</strong> 它同时是模型边界、团队边界和数据边界，三者对齐时，拆分才是健康的。</p>
+<h3 id="4-4-上下文映射（Context-Map）：边界之间怎么协作"><a href="#4-4-上下文映射（Context-Map）：边界之间怎么协作" class="headerlink" title="4.4 上下文映射（Context Map）：边界之间怎么协作"></a>4.4 上下文映射（Context Map）：边界之间怎么协作</h3><p>划好边界后，还要定义边界之间的关系，常见模式：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>含义</th>
+<th>使用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>共享内核（Shared Kernel）</td>
+<td>两个上下文共享一小块模型</td>
+<td>谨慎使用，共享越多耦合越重</td>
+</tr>
+<tr>
+<td>客户-供应商（Customer-Supplier）</td>
+<td>下游依赖上游，上游需照顾下游</td>
+<td>上游是内部团队时</td>
+</tr>
+<tr>
+<td>遵奉者（Conformist）</td>
+<td>下游直接照抄上游模型</td>
+<td>上游是强势外部系统时</td>
+</tr>
+<tr>
+<td><strong>防腐层（ACL）</strong></td>
+<td>下游加一层翻译，隔离外部模型</td>
+<td><strong>最常用，强烈推荐</strong></td>
+</tr>
+<tr>
+<td>开放主机服务（OHS）</td>
+<td>上游提供统一对外协议</td>
+<td>一个上游对多个下游</td>
+</tr>
+<tr>
+<td>各行其道（Separate Ways）</td>
+<td>干脆不集成</td>
+<td>集成成本大于收益时</td>
+</tr>
+</tbody></table>
+<p><strong>防腐层是微服务里最实用的模式</strong>：外部系统的 DTO 不要直接流进你的领域模型，中间加一层转换，外部一变只改这一层，领域模型不受污染。</p>
+<h3 id="4-5-战术设计的构件（写代码时用）"><a href="#4-5-战术设计的构件（写代码时用）" class="headerlink" title="4.5 战术设计的构件（写代码时用）"></a>4.5 战术设计的构件（写代码时用）</h3><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>定义</th>
+<th>判断要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>实体 Entity</strong></td>
+<td>有唯一标识，生命周期内标识不变</td>
+<td>用 ID 判等，而不是属性</td>
+</tr>
+<tr>
+<td><strong>值对象 Value Object</strong></td>
+<td>无标识，靠属性判等，不可变</td>
+<td>金额、地址、时间区间、订单号</td>
+</tr>
+<tr>
+<td><strong>聚合 Aggregate / 聚合根</strong></td>
+<td>一致性边界，一个事务只改一个聚合</td>
+<td>尽量小</td>
+</tr>
+<tr>
+<td><strong>领域事件 Domain Event</strong></td>
+<td>领域内发生的、业务关心的事实</td>
+<td>用过去式命名，如 <code>OrderPaid</code></td>
+</tr>
+<tr>
+<td><strong>仓储 Repository</strong></td>
+<td>聚合的持久化抽象</td>
+<td>只为聚合根建，不要给每张表建</td>
+</tr>
+<tr>
+<td><strong>领域服务 Domain Service</strong></td>
+<td>不属于任何实体的领域逻辑</td>
+<td>跨聚合的计算/规则</td>
+</tr>
+<tr>
+<td><strong>应用服务 Application Service</strong></td>
+<td>编排用例、控制事务边界</td>
+<td>要薄，不写业务规则</td>
+</tr>
+<tr>
+<td><strong>工厂 Factory</strong></td>
+<td>复杂对象的创建封装</td>
+<td>创建逻辑复杂时才需要</td>
+</tr>
+</tbody></table>
+<p><strong>聚合设计三条铁律</strong>（面试常问）：</p>
+<ol>
+<li><strong>一次事务只修改一个聚合</strong>——跨聚合的一致性交给领域事件 + 最终一致；</li>
+<li><strong>聚合之间用 ID 引用，不要用对象引用</strong>——否则加载一个对象会牵出整个对象图；</li>
+<li><strong>聚合要小</strong>——小到「一个事务能保证它的一致性」就够了，聚合越大并发冲突越严重。</li>
+</ol>
+<h3 id="4-6-一个关键澄清：DDD-不等于微服务"><a href="#4-6-一个关键澄清：DDD-不等于微服务" class="headerlink" title="4.6 一个关键澄清：DDD 不等于微服务"></a>4.6 一个关键澄清：DDD 不等于微服务</h3><ul>
+<li>DDD 也可以用在单体里（模块化单体 + 清晰的模块边界），而且<strong>先做 DDD 再拆服务</strong>才是正确顺序；</li>
+<li>微服务也可以不用 DDD，但边界会「飘」——因为没有业务依据，只能靠感觉切；</li>
+<li>DDD 真正的价值在于<strong>通用语言 + 限界上下文</strong>，战术构件是附赠品。</li>
+</ul>
+<h2 id="05-贫血模型-vs-充血模型：到底怎么取舍"><a href="#05-贫血模型-vs-充血模型：到底怎么取舍" class="headerlink" title="05 贫血模型 vs 充血模型：到底怎么取舍"></a>05 贫血模型 vs 充血模型：到底怎么取舍</h2><h3 id="5-1-定义"><a href="#5-1-定义" class="headerlink" title="5.1 定义"></a>5.1 定义</h3><ul>
+<li><strong>贫血模型（Anemic Domain Model）</strong>：对象只有数据和 getter/setter，业务规则全部写在 Service 里。本质是「面向过程的<strong>事务脚本</strong>」。</li>
+<li><strong>充血模型（Rich Domain Model）</strong>：对象既有数据也有行为，业务规则内聚在领域对象内部。</li>
+<li>中间还有「失血模型」「胀血模型」等说法，但核心就是<strong>业务逻辑到底放在哪</strong>。</li>
+</ul>
+<h3 id="5-2-代码对比：以「订单支付」为例"><a href="#5-2-代码对比：以「订单支付」为例" class="headerlink" title="5.2 代码对比：以「订单支付」为例"></a>5.2 代码对比：以「订单支付」为例</h3><p><strong>贫血版</strong>——规则散落在 Service 里：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Order.java：纯数据载体，只有字段和 getter/setter</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Order</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> Long id;</span><br><span class="line">    <span class="keyword">private</span> BigDecimal totalAmount;</span><br><span class="line">    <span class="keyword">private</span> String status;   <span class="comment">// PENDING / PAID / CANCELLED</span></span><br><span class="line">    <span class="comment">// getter / setter ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// OrderService.java：所有规则集中在这里，且可以被任何地方绕过</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OrderService</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">pay</span><span class="params">(Long orderId, BigDecimal paid)</span> &#123;</span><br><span class="line">        <span class="type">Order</span> <span class="variable">order</span> <span class="operator">=</span> orderMapper.selectById(orderId);</span><br><span class="line">        <span class="keyword">if</span> (!<span class="string">&quot;PENDING&quot;</span>.equals(order.getStatus())) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BizException</span>(<span class="string">&quot;订单状态不允许支付&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (paid.compareTo(order.getTotalAmount()) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">BizException</span>(<span class="string">&quot;支付金额不足&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        order.setStatus(<span class="string">&quot;PAID&quot;</span>);     <span class="comment">// 任何一处代码都能这么改，规则没有护栏</span></span><br><span class="line">        orderMapper.update(order);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>问题在哪？<strong>规则和状态分离了</strong>：只要有人拿到 <code>Order</code>，就能 <code>setStatus(&quot;PAID&quot;)</code>，绕过校验。规则一多，<code>OrderService</code> 就变成「上帝类」，且多个入口各写一遍校验，迟早不一致。</p>
+<p><strong>充血版</strong>——规则内聚在领域对象里：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Order</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> OrderId id;</span><br><span class="line">    <span class="keyword">private</span> List&lt;OrderItem&gt; items;</span><br><span class="line">    <span class="keyword">private</span> Money totalAmount;</span><br><span class="line">    <span class="keyword">private</span> OrderStatus status;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/** 支付：状态校验 + 金额校验 + 状态流转，一次性内聚 */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">pay</span><span class="params">(Money paid)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (status != OrderStatus.PENDING) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">DomainException</span>(<span class="string">&quot;订单状态不允许支付&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (paid.isLessThan(totalAmount)) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">DomainException</span>(<span class="string">&quot;支付金额不足&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">this</span>.status = OrderStatus.PAID;</span><br><span class="line">        registerEvent(<span class="keyword">new</span> <span class="title class_">OrderPaidEvent</span>(id, paid));   <span class="comment">// 领域事件</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/** 取消：规则同样由对象自己守住 */</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">cancel</span><span class="params">(String reason)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (status == OrderStatus.PAID) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">DomainException</span>(<span class="string">&quot;已支付订单需走退款流程，不能直接取消&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">this</span>.status = OrderStatus.CANCELLED;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p><strong>应用服务随之变薄</strong>，只负责编排和事务：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">OrderApplicationService</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> OrderRepository orderRepository;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> DomainEventPublisher eventPublisher;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Transactional</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">pay</span><span class="params">(PayCommand cmd)</span> &#123;</span><br><span class="line">        <span class="type">Order</span> <span class="variable">order</span> <span class="operator">=</span> orderRepository.findById(cmd.getOrderId());</span><br><span class="line">        order.pay(cmd.getAmount());        <span class="comment">// 业务规则在领域对象内部</span></span><br><span class="line">        orderRepository.save(order);</span><br><span class="line">        eventPublisher.publish(order.pullEvents());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>对比一下就能看出差别：<strong>贫血版里规则是「可以被绕过的」，充血版里规则是「绕不过去的」</strong>——因为状态只能通过 <code>pay()</code> 这类方法改变。</p>
+<h3 id="5-3-全面对比"><a href="#5-3-全面对比" class="headerlink" title="5.3 全面对比"></a>5.3 全面对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>贫血模型</th>
+<th>充血模型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>业务规则位置</td>
+<td>Service 里，集中但容易散落、重复</td>
+<td>领域对象内，内聚，只写一处</td>
+</tr>
+<tr>
+<td>上手 / 维护成本</td>
+<td>低，符合大多数人的编程习惯</td>
+<td>高，需要建模能力和团队共识</td>
+</tr>
+<tr>
+<td>与 ORM 的契合度</td>
+<td>天然契合（POJO + Mapper）</td>
+<td>需要处理不可变、无 setter、集合封装</td>
+</tr>
+<tr>
+<td>单元测试</td>
+<td>常依赖 Mapper/DB，偏集成测试</td>
+<td>纯内存对象，测试快、覆盖全</td>
+</tr>
+<tr>
+<td>规则一致性</td>
+<td>多个入口容易各写一遍校验</td>
+<td>规则唯一，改一处全生效</td>
+</tr>
+<tr>
+<td>可读性</td>
+<td>面向过程，逻辑直白</td>
+<td>需要理解领域概念，但更贴近业务</td>
+</tr>
+<tr>
+<td>适合场景</td>
+<td>CRUD、报表、支撑域/通用域</td>
+<td>核心域、规则复杂、状态机多、涉及钱</td>
+</tr>
+<tr>
+<td>主要风险</td>
+<td>上帝 Service、规则漂移、贫血化回流</td>
+<td>过度设计、为充血而充血、模型「假装充血」</td>
+</tr>
+</tbody></table>
+<h3 id="5-4-取舍建议（重点，七条）"><a href="#5-4-取舍建议（重点，七条）" class="headerlink" title="5.4 取舍建议（重点，七条）"></a>5.4 取舍建议（重点，七条）</h3><ol>
+<li><strong>不要一刀切</strong>：核心域（订单、交易、风控、结算）用充血；支撑域/通用域（配置、字典、消息、日志）用贫血，够用就行。</li>
+<li><strong>用「不变式」来识别</strong>：如果一个对象上有多条互相约束的规则（状态机、金额上下限、额度校验），那就该充血——因为规则必须被守住。</li>
+<li><strong>别把 Service 整个搬进 Entity</strong>：跨聚合的编排、外部调用、事务边界，留在应用服务里；只有<strong>属于这个对象的规则</strong>才搬进去。</li>
+<li><strong>充血不等于不需要 Service</strong>：应用服务（编排 + 事务）、领域服务（跨聚合计算）依然需要，只是它们不再是业务规则的唯一容器。</li>
+<li><strong>领域层不要依赖框架</strong>：尽量别让 <code>@Entity</code>、<code>@Autowired</code>、Mapper 注解侵入领域对象。做不到就退一步，用独立的持久化对象 + 转换（DTO/PO 与领域对象分离）。</li>
+<li><strong>渐进式重构</strong>，别一步到位：<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">第一步：先抽值对象（Money、OrderId、Address），把原始类型收口</span><br><span class="line">第二步：把状态流转和校验搬进实体方法，去掉外部 setStatus</span><br><span class="line">第三步：再引入领域事件、仓储抽象，解耦跨聚合协作</span><br></pre></td></tr></table></figure></div></li>
+<li><strong>别在贫血模型上硬套 DDD 战术构件</strong>：贫血的 Entity + Repository + 领域事件 = <strong>形式主义 DDD</strong>，只会增加代码量，不产生任何价值。</li>
+</ol>
+<h3 id="5-5-五个常见误区"><a href="#5-5-五个常见误区" class="headerlink" title="5.5 五个常见误区"></a>5.5 五个常见误区</h3><table>
+<thead>
+<tr>
+<th>误区</th>
+<th>纠正</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DDD 就等于充血模型</td>
+<td>DDD 的核心是<strong>边界和语言</strong>，战术模型只是其中一环</td>
+</tr>
+<tr>
+<td>充血 = 把 Service 方法剪切到 Entity</td>
+<td>充血的标准是「规则由对象自己守住」，不是代码搬家</td>
+</tr>
+<tr>
+<td>聚合越大越完整</td>
+<td>聚合要尽量小，只圈住「必须强一致的」那部分</td>
+</tr>
+<tr>
+<td>一个事务可以更新多个聚合</td>
+<td>跨聚合用领域事件 + 最终一致，不要跨聚合加锁</td>
+</tr>
+<tr>
+<td>用了 ORM 就做不了充血</td>
+<td>可以做，只是需要额外处理不可变和集合封装，或者做对象转换</td>
+</tr>
+</tbody></table>
+<h2 id="06-落地路线图：从单体到微服务的五个阶段"><a href="#06-落地路线图：从单体到微服务的五个阶段" class="headerlink" title="06 落地路线图：从单体到微服务的五个阶段"></a>06 落地路线图：从单体到微服务的五个阶段</h2><p>不要幻想一次拆完，按阶段演进，每个阶段都有明确的验收标准：</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>做什么</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0. 模块化单体</td>
+<td>在单体内部按限界上下文划分模块，禁止跨模块直接访问对方的表和 Mapper</td>
+<td>模块依赖无环，跨模块只能走公开接口</td>
+</tr>
+<tr>
+<td>1. 抽接口 + 防腐层</td>
+<td>给要拆的模块定义接口，外部系统加 ACL 转换</td>
+<td>本地实现可被替换为远程实现</td>
+</tr>
+<tr>
+<td>2. 拆服务（读侧优先）</td>
+<td>把只读/低耦合功能独立部署，网关切流</td>
+<td>新服务独立发布，监控告警齐全</td>
+</tr>
+<tr>
+<td>3. 拆数据</td>
+<td>明确单一写入者，事件同步只读副本，逐步独立库</td>
+<td>无跨库 JOIN，无跨库事务</td>
+</tr>
+<tr>
+<td>4. 治理平台化</td>
+<td>契约管理、全链路追踪、熔断限流、对账补偿</td>
+<td>故障可定位、可回滚、可补偿</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>关键顺序：<strong>先划边界 → 再拆服务 → 最后拆数据</strong>。反过来做（先拆库）几乎一定会返工。</p>
+</blockquote>
+<h2 id="07-面试速答模板"><a href="#07-面试速答模板" class="headerlink" title="07 面试速答模板"></a>07 面试速答模板</h2><p><strong>Q1：单体怎么拆微服务？</strong></p>
+<blockquote>
+<p>先看要不要拆——多团队互相阻塞、模块伸缩与变更频率差异大、单体交付效率低，三条中一条才值得拆。拆的思路是五步：梳理现状（依赖矩阵、调用链、数据依赖）→ 用 DDD 的限界上下文识别边界 → 用绞杀者模式渐进迁移，先拆低耦合的读侧 → 再拆数据，坚持单一写入者，用本地消息表/事务消息做最终一致 + 对账兜底 → 最后补齐契约、可观测、熔断限流等治理能力。<strong>核心原则是按业务能力垂直切，绝不按技术分层横切，否则就是分布式单体。</strong></p>
+</blockquote>
+<p><strong>Q2：DDD 的核心思想是什么？</strong></p>
+<blockquote>
+<p>DDD 是一套把业务领域知识映射成软件模型的建模方法论，核心是三层：最底层是<strong>通用语言</strong>，让业务和代码说同一套词；中间是<strong>战略设计</strong>，用子域（核心域/支撑域/通用域）和<strong>限界上下文</strong>划清模型边界，再用上下文映射（防腐层、客户-供应商等）定义边界间的协作；最上层是<strong>战术设计</strong>，用实体、值对象、聚合、领域事件、仓储把模型落地。其中<strong>限界上下文是拆微服务时最重要的抓手</strong>，它同时是模型边界、团队边界和数据边界。DDD 不等于微服务，它也可以用在模块化单体里。</p>
+</blockquote>
+<p><strong>Q3：贫血模型和充血模型怎么选？</strong></p>
+<blockquote>
+<p>按子域的重要程度分而治之：<strong>核心域用充血</strong>，把状态流转和业务规则内聚到领域对象里，避免规则被绕过；<strong>支撑域和通用域用贫血</strong>，CRUD 够用就行，别过度设计。识别标准是「有没有需要守住的不变式」——有状态机、金额约束这类互相制约的规则就充血。同时要澄清两点：充血不等于把 Service 代码搬进 Entity，跨聚合编排和事务边界仍留在应用服务；也不要在贫血模型上硬套 Repository 和领域事件，那只是形式主义。落地建议是渐进重构：先抽值对象，再把规则搬进实体，最后引入领域事件。</p>
+</blockquote>
+<h2 id="08-一页速查"><a href="#08-一页速查" class="headerlink" title="08 一页速查"></a>08 一页速查</h2><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">拆微服务 = 拆边界</span><br><span class="line">  ├─ 依据：业务能力 / 子域（限界上下文），不是技术分层</span><br><span class="line">  ├─ 顺序：划边界 → 拆服务 → 拆数据 → 治理</span><br><span class="line">  ├─ 方式：绞杀者模式，渐进迁移，先读后写、先边缘后核心</span><br><span class="line">  └─ 底线：单一写入者 + 最终一致 + 对账补偿</span><br><span class="line"></span><br><span class="line">DDD = 通用语言 + 战略设计 + 战术设计</span><br><span class="line">  ├─ 战略：子域（核心/支撑/通用）、限界上下文、上下文映射（ACL）</span><br><span class="line">  └─ 战术：实体、值对象、聚合根、领域事件、仓储、领域服务</span><br><span class="line">     铁律：一次事务一个聚合；聚合间用 ID 引用；聚合要小</span><br><span class="line"></span><br><span class="line">贫血 vs 充血</span><br><span class="line">  ├─ 贫血：数据在对象、规则在 Service → 适合 CRUD / 支撑域 / 通用域</span><br><span class="line">  └─ 充血：数据 + 规则都在对象 → 适合核心域、规则复杂、涉及钱的场景</span><br><span class="line">     识别标准：有没有必须守住的不变式（状态机、金额约束）</span><br><span class="line">     最大误区：把 DDD 等同于充血模型；把 Service 代码剪切进 Entity</span><br></pre></td></tr></table></figure></div>
+
+<p>最后再强调一遍开头的结论：<strong>先想清楚要不要拆，再用 DDD 划边界，最后才讨论模型要不要充血。顺序错了，怎么拆都是分布式单体。</strong></p>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 单体拆微服务：拆分思路、DDD 核心思想与贫血/充血模型的取舍</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-10-13 16:39:13</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-10-13 16:39:13
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/10/13/单体拆微服务与DDD核心思想/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
+</div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E7%B3%BB%E7%BB%9F%E8%AE%BE%E8%AE%A1/">#系统设计</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%BE%AE%E6%9C%8D%E5%8A%A1/">#微服务</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/DDD/">#DDD</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%A2%86%E5%9F%9F%E9%A9%B1%E5%8A%A8%E8%AE%BE%E8%AE%A1/">#领域驱动设计</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E6%9E%B6%E6%9E%84/">#架构</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%85%85%E8%A1%80%E6%A8%A1%E5%9E%8B/">#充血模型</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/10/12/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day15-WebSocket%E7%BB%93%E5%90%88Netty%E4%B8%8EMQ%E7%9A%8450%E4%B8%87%E5%9C%A8%E7%BA%BF%E5%AE%A2%E6%9C%8D%E7%B3%BB%E7%BB%9F/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day15：WebSocket结合Netty与MQ的50万在线客服系统</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
+	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">单体拆微服务：拆分思路、DDD 核心思想与贫血/充血模型的取舍</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%88%E8%AF%B4%E7%BB%93%E8%AE%BA"><span class="nav-text">先说结论</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#01-%E5%85%88%E9%97%AE%E8%87%AA%E5%B7%B1%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8B%86%EF%BC%9F%E4%B8%8D%E6%8B%86%E8%A1%8C%E4%B8%8D%E8%A1%8C%EF%BC%9F"><span class="nav-text">01 先问自己：为什么拆？不拆行不行？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#02-%E6%8B%86%E5%88%86%E7%9A%84%E6%80%BB%E4%BD%93%E6%80%9D%E8%B7%AF%EF%BC%9A%E4%BA%94%E6%AD%A5%E8%B5%B0"><span class="nav-text">02 拆分的总体思路：五步走</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AC%AC-1-%E6%AD%A5%EF%BC%9A%E7%8E%B0%E7%8A%B6%E6%A2%B3%E7%90%86%EF%BC%88%E5%88%AB%E8%B7%B3%E8%BF%87%EF%BC%89"><span class="nav-text">第 1 步：现状梳理（别跳过）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AC%AC-2-%E6%AD%A5%EF%BC%9A%E8%AF%86%E5%88%AB%E8%BE%B9%E7%95%8C%E2%80%94%E2%80%94%E7%94%A8-DDD-%E7%9A%84%E9%99%90%E7%95%8C%E4%B8%8A%E4%B8%8B%E6%96%87"><span class="nav-text">第 2 步：识别边界——用 DDD 的限界上下文</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AC%AC-3-%E6%AD%A5%EF%BC%9A%E6%8B%86%E5%88%86%E8%AE%BE%E8%AE%A1%E4%B8%8E%E4%BC%98%E5%85%88%E7%BA%A7"><span class="nav-text">第 3 步：拆分设计与优先级</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AC%AC-4-%E6%AD%A5%EF%BC%9A%E6%95%B0%E6%8D%AE%E6%8B%86%E5%88%86%EF%BC%88%E7%9C%9F%E6%AD%A3%E7%9A%84%E9%9A%BE%E7%82%B9%EF%BC%89"><span class="nav-text">第 4 步：数据拆分（真正的难点）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AC%AC-5-%E6%AD%A5%EF%BC%9A%E6%B2%BB%E7%90%86%E4%B8%8E%E6%BC%94%E8%BF%9B"><span class="nav-text">第 5 步：治理与演进</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#03-%E6%8C%89%E4%BB%80%E4%B9%88%E7%BB%B4%E5%BA%A6%E5%88%87%EF%BC%9F%E4%BA%94%E4%B8%AA%E5%8F%AF%E7%94%A8%E4%BE%9D%E6%8D%AE%EF%BC%88%E9%99%84%E5%8F%8D%E4%BE%8B%EF%BC%89"><span class="nav-text">03 按什么维度切？五个可用依据（附反例）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%8D%E6%A8%A1%E5%BC%8F%EF%BC%9A%E5%88%86%E5%B8%83%E5%BC%8F%E5%8D%95%E4%BD%93%EF%BC%88Distributed-Monolith%EF%BC%89"><span class="nav-text">反模式：分布式单体（Distributed Monolith）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#04-DDD-%E7%9A%84%E6%A0%B8%E5%BF%83%E6%80%9D%E6%83%B3%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-text">04 DDD 的核心思想到底是什么</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E9%80%9A%E7%94%A8%E8%AF%AD%E8%A8%80%EF%BC%88Ubiquitous-Language%EF%BC%89"><span class="nav-text">4.1 通用语言（Ubiquitous Language）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E9%A2%86%E5%9F%9F%E4%B8%8E%E5%AD%90%E5%9F%9F%EF%BC%9A%E6%8A%8A%E7%B2%BE%E5%8A%9B%E8%8A%B1%E5%9C%A8%E5%88%80%E5%88%83%E4%B8%8A"><span class="nav-text">4.2 领域与子域：把精力花在刀刃上</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E9%99%90%E7%95%8C%E4%B8%8A%E4%B8%8B%E6%96%87%EF%BC%88Bounded-Context%EF%BC%89%E2%80%94%E2%80%94-%E6%9C%80%E9%87%8D%E8%A6%81%E7%9A%84%E6%8A%93%E6%89%8B"><span class="nav-text">4.3 限界上下文（Bounded Context）—— 最重要的抓手</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E4%B8%8A%E4%B8%8B%E6%96%87%E6%98%A0%E5%B0%84%EF%BC%88Context-Map%EF%BC%89%EF%BC%9A%E8%BE%B9%E7%95%8C%E4%B9%8B%E9%97%B4%E6%80%8E%E4%B9%88%E5%8D%8F%E4%BD%9C"><span class="nav-text">4.4 上下文映射（Context Map）：边界之间怎么协作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-%E6%88%98%E6%9C%AF%E8%AE%BE%E8%AE%A1%E7%9A%84%E6%9E%84%E4%BB%B6%EF%BC%88%E5%86%99%E4%BB%A3%E7%A0%81%E6%97%B6%E7%94%A8%EF%BC%89"><span class="nav-text">4.5 战术设计的构件（写代码时用）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-6-%E4%B8%80%E4%B8%AA%E5%85%B3%E9%94%AE%E6%BE%84%E6%B8%85%EF%BC%9ADDD-%E4%B8%8D%E7%AD%89%E4%BA%8E%E5%BE%AE%E6%9C%8D%E5%8A%A1"><span class="nav-text">4.6 一个关键澄清：DDD 不等于微服务</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#05-%E8%B4%AB%E8%A1%80%E6%A8%A1%E5%9E%8B-vs-%E5%85%85%E8%A1%80%E6%A8%A1%E5%9E%8B%EF%BC%9A%E5%88%B0%E5%BA%95%E6%80%8E%E4%B9%88%E5%8F%96%E8%88%8D"><span class="nav-text">05 贫血模型 vs 充血模型：到底怎么取舍</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%AE%9A%E4%B9%89"><span class="nav-text">5.1 定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E4%BB%A3%E7%A0%81%E5%AF%B9%E6%AF%94%EF%BC%9A%E4%BB%A5%E3%80%8C%E8%AE%A2%E5%8D%95%E6%94%AF%E4%BB%98%E3%80%8D%E4%B8%BA%E4%BE%8B"><span class="nav-text">5.2 代码对比：以「订单支付」为例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E5%85%A8%E9%9D%A2%E5%AF%B9%E6%AF%94"><span class="nav-text">5.3 全面对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E5%8F%96%E8%88%8D%E5%BB%BA%E8%AE%AE%EF%BC%88%E9%87%8D%E7%82%B9%EF%BC%8C%E4%B8%83%E6%9D%A1%EF%BC%89"><span class="nav-text">5.4 取舍建议（重点，七条）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-5-%E4%BA%94%E4%B8%AA%E5%B8%B8%E8%A7%81%E8%AF%AF%E5%8C%BA"><span class="nav-text">5.5 五个常见误区</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#06-%E8%90%BD%E5%9C%B0%E8%B7%AF%E7%BA%BF%E5%9B%BE%EF%BC%9A%E4%BB%8E%E5%8D%95%E4%BD%93%E5%88%B0%E5%BE%AE%E6%9C%8D%E5%8A%A1%E7%9A%84%E4%BA%94%E4%B8%AA%E9%98%B6%E6%AE%B5"><span class="nav-text">06 落地路线图：从单体到微服务的五个阶段</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#07-%E9%9D%A2%E8%AF%95%E9%80%9F%E7%AD%94%E6%A8%A1%E6%9D%BF"><span class="nav-text">07 面试速答模板</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#08-%E4%B8%80%E9%A1%B5%E9%80%9F%E6%9F%A5"><span class="nav-text">08 一页速查</span></a></li></ol>
+
+	</div>
+</div>
+	</div>
+	
+</div>
+
+			</div>
+
+			
+		</div>
+
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2017</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">Percy jie</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 26 篇文章
+                    </span>
+                    
+                        <span>
+                            共 63.4k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
+
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
+	
+
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>

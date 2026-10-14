@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="AI, Java, Security, Blog">
+    
+    
+    <meta name="author" content="Percy jie">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://percyjie.github.io/2026/10/14/复习知识点day16-10年java后端转大数据的学习路线与快速入门/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day16：10年Java后端转大数据的学习路线与快速入门">
+<meta property="og:url" content="https://percyjie.github.io/2026/10/14/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day16-10%E5%B9%B4Java%E5%90%8E%E7%AB%AF%E8%BD%AC%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF%E4%B8%8E%E5%BF%AB%E9%80%9F%E5%85%A5%E9%97%A8/index.html">
+<meta property="og:site_name" content="Percy&#39;s Note">
+<meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-10-14T08:36:35.000Z">
+<meta property="article:modified_time" content="2026-10-14T08:36:35.000Z">
+<meta property="article:author" content="Percy jie">
+<meta property="article:tag" content="Flink">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="Kafka">
+<meta property="article:tag" content="Spark">
+<meta property="article:tag" content="复习知识点">
+<meta property="article:tag" content="大数据">
+<meta property="article:tag" content="学习路线">
+<meta property="article:tag" content="职业发展">
+<meta property="article:tag" content="面试">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            复习知识点Day16：10年Java后端转大数据的学习路线与快速入门 | Percy&#39;s Note
+        
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"percyjie.github.io","root":"/","language":"zh-CN"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"vs2015"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/redefine-og.webp","description":"人没有梦想，和咸鱼有什么分别"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Percy's Note","subtitle":{"text":["人没有梦想，和咸鱼有什么分别"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"default","links":[{"icon":"fa-brands fa-github","url":"https://github.com/percyjie"},{"icon":"fa-brands fa-weibo","url":"https://weibo.com/panjie0709"},{"icon":null,"url":null},{"icon":null,"url":null},{"icon":null,"url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"cloud","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":{"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}}},"article_date_format":"auto","excerpt_length":200,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart fa-beat\" style=\"--fa-animation-duration: 0.5s; color: #f54545\"></i>","start":"2017/03/08 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2017/03/08 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                Percy&#39;s Note
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/tags"
+                                        >
+                                    <i class="fa-regular fa-tags fa-fw"></i>
+                                    标签
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/tags"
+                        >
+                            <span>
+                                标签
+                            </span>
+                            
+                                <i class="fa-regular fa-tags fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">90</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">12</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">27</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+
+			<div class="main-content">
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
+
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day16：10年Java后端转大数据的学习路线与快速入门</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv3</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-10-14 16:36:35</span>
+        <span class="mobile">2026-10-14 16:36:35</span>
+        <span class="hover-info">创建</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-10-14 16:36:35</span>
+            <span class="mobile">2026-10-14 16:36:35</span>
+            <span class="hover-info">更新</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/">大数据</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">复习知识点</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%A7%E6%95%B0%E6%8D%AE/">大数据</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Spark/">Spark</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Flink/">Flink</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Hadoop/">Hadoop</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Kafka/">Kafka</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E8%81%8C%E4%B8%9A%E5%8F%91%E5%B1%95/">职业发展</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/">学习路线</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>4.4k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>17 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天：<strong>Java 后端转大数据，最难的不是语言，而是「从面向对象思维切到面向数据思维」——把接口/对象换成表/分区/批次，把「一次请求」换成「一批数据」。</strong> 所以路线是四段：<strong>地基（Linux + SQL + 数据思维）→ 生态（Hadoop/Hive/Kafka/HBase）→ 引擎（Spark 离线 + Flink 实时）→ 工程（数仓建模 + 湖仓 + 调度 + 项目）</strong>。10 年后端经验是巨大优势（JVM、并发、分布式、工程能力可直接复用），真正要补的是 <strong>SQL 深度、数据建模、计算引擎调优、数据规模下的排障思维</strong>。</p>
+</blockquote>
+<h2 id="先说结论"><a href="#先说结论" class="headerlink" title="先说结论"></a>先说结论</h2><p>一张图先看全貌，后面按阶段展开：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">第 1 阶段（2~3 周）  地基期：Linux + Shell + SQL 强化 + 数据思维</span><br><span class="line">第 2 阶段（3~4 周）  生态期：HDFS / YARN / Hive / Kafka / HBase / ZooKeeper</span><br><span class="line">第 3 阶段（4~6 周）  计算期：Spark（离线主力） + Flink（实时主力） + Scala 够用就行</span><br><span class="line">第 4 阶段（4~6 周）  工程期：数仓分层建模 + 湖仓一体 + 调度 + 一个能写进简历的项目</span><br></pre></td></tr></table></figure></div>
+
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>要学多少东西</td>
+<td>组件很多，但<strong>核心只有四个</strong>：Hive（SQL 数仓）、Spark（批）、Flink（流）、Kafka（数据管道）</td>
+</tr>
+<tr>
+<td>最先学什么</td>
+<td><strong>SQL + Linux</strong>，不是 Scala，也不是 Spark 源码</td>
+</tr>
+<tr>
+<td>最难的是什么</td>
+<td>不是语法，而是<strong>数据建模（数仓分层/维度建模）和数据倾斜这类规模问题</strong></td>
+</tr>
+<tr>
+<td>学多久能上手</td>
+<td>全职 4<del>6 个月；在职每周 15</del>20 小时，约 6~8 个月</td>
+</tr>
+<tr>
+<td>10 年经验的价值</td>
+<td>JVM、并发、分布式、稳定性治理、工程化——这些在大数据平台里同样稀缺，是降维优势</td>
+</tr>
+<tr>
+<td>面试怎么过</td>
+<td>离线数仓分层 + 维度建模 + Spark 调优 + Flink 状态与一致性 + Kafka 可靠性，五块打通</td>
+</tr>
+</tbody></table>
+<p>一句话概括：<strong>大数据不是「更高级的后端」，而是「以数据为中心的批流计算 + 数据治理」。</strong> 你要补的是数据视角，不是重学一门编程语言。</p>
+<h2 id="01-先认清：10-年-Java-后端的优势与短板"><a href="#01-先认清：10-年-Java-后端的优势与短板" class="headerlink" title="01 先认清：10 年 Java 后端的优势与短板"></a>01 先认清：10 年 Java 后端的优势与短板</h2><h3 id="1-1-可直接复用的能力（别浪费）"><a href="#1-1-可直接复用的能力（别浪费）" class="headerlink" title="1.1 可直接复用的能力（别浪费）"></a>1.1 可直接复用的能力（别浪费）</h3><table>
+<thead>
+<tr>
+<th>已有能力</th>
+<th>在大数据里对应什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JVM 调优、GC、内存模型</td>
+<td>Spark/Flink Executor 的堆内存、GC、OOM 排查，几乎原样复用</td>
+</tr>
+<tr>
+<td>多线程与并发</td>
+<td>Spark 的并行度、Flink 的算子并发、线程模型理解</td>
+</tr>
+<tr>
+<td>分布式基础（RPC/MQ/Redis/微服务）</td>
+<td>Kafka、ZooKeeper、YARN、分布式一致性，理解成本极低</td>
+</tr>
+<tr>
+<td>工程能力（CI/CD、监控、日志、压测）</td>
+<td>数据平台的稳定性治理，很多纯数据背景的人反而弱在这</td>
+</tr>
+<tr>
+<td>Spring / Java 生态</td>
+<td>Hadoop、Spark、Flink、Kafka 全是 JVM 系，源码都能读</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>现实一点说：<strong>大数据组件几乎都是 Java/Scala 写的</strong>，一个懂 JVM 的后端去调 Spark OOM，比一个只会写 SQL 的人快十倍。这是你最大的杠杆。</p>
+</blockquote>
+<h3 id="1-2-必须补的短板"><a href="#1-2-必须补的短板" class="headerlink" title="1.2 必须补的短板"></a>1.2 必须补的短板</h3><table>
+<thead>
+<tr>
+<th>短板</th>
+<th>为什么致命</th>
+<th>补法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>SQL 深度不够</strong></td>
+<td>数仓 80% 的活是 SQL，窗口函数、行列转换写不利索直接卡住</td>
+<td>每天刷 3~5 道 SQL 题，练到能徒手写连续活跃/同比环比</td>
+</tr>
+<tr>
+<td><strong>Linux/Shell 不熟</strong></td>
+<td>集群操作、日志排查、脚本调度全在命令行</td>
+<td>熟练 grep/awk/sed/find/crontab，能写调度脚本</td>
+</tr>
+<tr>
+<td><strong>数据建模思维</strong></td>
+<td>只会写 SQL 的是「取数工程师」，会建模的才是数仓工程师</td>
+<td>学维度建模、分层理论，动手设计一套主题域</td>
+</tr>
+<tr>
+<td><strong>规模思维</strong></td>
+<td>单机 100 万行和集群 100 亿行是两种问题</td>
+<td>理解数据倾斜、shuffle、小文件、分区裁剪</td>
+</tr>
+<tr>
+<td><strong>Scala</strong></td>
+<td>Spark 生态大量用 Scala，看源码绕不开</td>
+<td>学到「能读懂 + 能写 DataFrame/DataStream」即可</td>
+</tr>
+<tr>
+<td><strong>实时链路认知</strong></td>
+<td>离线是过去时，实时是现在时</td>
+<td>Flink 的状态、水位线、精确一次必须搞懂</td>
+</tr>
+</tbody></table>
+<h3 id="1-3-心态上要转的三个弯"><a href="#1-3-心态上要转的三个弯" class="headerlink" title="1.3 心态上要转的三个弯"></a>1.3 心态上要转的三个弯</h3><ol>
+<li><strong>从「接口思维」到「表思维」</strong>：后端关心一次请求的响应时间；大数据关心一张表的分区、批次、数据量、倾斜。</li>
+<li><strong>从「强一致」到「最终一致」</strong>：数仓数据天然是 T+1 或分钟级延迟，追求「可重跑、可对账」而不是「实时强一致」。</li>
+<li><strong>从「调优一个服务」到「调优一个作业」</strong>：作业的资源、并行度、数据分布才是瓶颈所在。</li>
+</ol>
+<h2 id="02-阶段一：地基期（2-3-周）——SQL、Linux、数据思维"><a href="#02-阶段一：地基期（2-3-周）——SQL、Linux、数据思维" class="headerlink" title="02 阶段一：地基期（2~3 周）——SQL、Linux、数据思维"></a>02 阶段一：地基期（2~3 周）——SQL、Linux、数据思维</h2><h3 id="2-1-SQL-是重中之重（占地基期-60-的时间）"><a href="#2-1-SQL-是重中之重（占地基期-60-的时间）" class="headerlink" title="2.1 SQL 是重中之重（占地基期 60% 的时间）"></a>2.1 SQL 是重中之重（占地基期 60% 的时间）</h3><p>必练清单：多表 JOIN、窗口函数、行列转换、去重取最新、连续区间、同环比、Top N。</p>
+<p><strong>例 1：分组取 Top N（<code>ROW_NUMBER</code>）</strong></p>
+<div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 每个品类销售额 Top3 商品</span></span><br><span class="line"><span class="keyword">SELECT</span> category_id, sku_id, amount</span><br><span class="line"><span class="keyword">FROM</span> (</span><br><span class="line">  <span class="keyword">SELECT</span> category_id,</span><br><span class="line">         sku_id,</span><br><span class="line">         amount,</span><br><span class="line">         <span class="built_in">ROW_NUMBER</span>() <span class="keyword">OVER</span> (<span class="keyword">PARTITION</span> <span class="keyword">BY</span> category_id <span class="keyword">ORDER</span> <span class="keyword">BY</span> amount <span class="keyword">DESC</span>) <span class="keyword">AS</span> rn</span><br><span class="line">  <span class="keyword">FROM</span> dws_sku_sales_d</span><br><span class="line">  <span class="keyword">WHERE</span> dt <span class="operator">=</span> <span class="string">&#x27;2026-10-14&#x27;</span></span><br><span class="line">) t</span><br><span class="line"><span class="keyword">WHERE</span> rn <span class="operator">&lt;=</span> <span class="number">3</span>;</span><br></pre></td></tr></table></figure></div>
+
+<p><strong>例 2：连续活跃天数（经典面试题，考的是「日期 - 行号」技巧）</strong></p>
+<div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 求每个用户的连续活跃天数</span></span><br><span class="line"><span class="keyword">SELECT</span> uid, <span class="built_in">COUNT</span>(<span class="operator">*</span>) <span class="keyword">AS</span> continuous_days</span><br><span class="line"><span class="keyword">FROM</span> (</span><br><span class="line">  <span class="keyword">SELECT</span> uid,</span><br><span class="line">         DATE_SUB(dt, <span class="built_in">ROW_NUMBER</span>() <span class="keyword">OVER</span> (<span class="keyword">PARTITION</span> <span class="keyword">BY</span> uid <span class="keyword">ORDER</span> <span class="keyword">BY</span> dt)) <span class="keyword">AS</span> grp</span><br><span class="line">  <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> <span class="keyword">DISTINCT</span> uid, dt <span class="keyword">FROM</span> user_active_d) t1</span><br><span class="line">) t2</span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> uid, grp;</span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p>技巧点：<strong>同一天减去递增的行号，连续区间会得到同一个 <code>grp</code> 值</strong>，这是「连续 N 天」类题目的通用解法。</p>
+</blockquote>
+<p><strong>例 3：行列转换（<code>explode</code> + <code>collect_list</code>）</strong></p>
+<div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 行转列：一个订单的多个商品压成数组</span></span><br><span class="line"><span class="keyword">SELECT</span> order_id, COLLECT_LIST(sku_id) <span class="keyword">AS</span> sku_list</span><br><span class="line"><span class="keyword">FROM</span> dwd_order_item_d</span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> order_id;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 列转行：把数组炸开成多行</span></span><br><span class="line"><span class="keyword">SELECT</span> order_id, sku_id</span><br><span class="line"><span class="keyword">FROM</span> dwd_order_d</span><br><span class="line"><span class="keyword">LATERAL</span> <span class="keyword">VIEW</span> EXPLODE(split(sku_ids, <span class="string">&#x27;,&#x27;</span>)) tmp <span class="keyword">AS</span> sku_id;</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="2-2-Linux-Shell"><a href="#2-2-Linux-Shell" class="headerlink" title="2.2 Linux + Shell"></a>2.2 Linux + Shell</h3><ul>
+<li>文件与文本处理：<code>grep</code>、<code>awk</code>、<code>sed</code>、<code>sort | uniq -c</code>、<code>cut</code>（日志分析天天用）</li>
+<li>进程与资源：<code>top</code>、<code>free</code>、<code>df -h</code>、<code>jps</code>、<code>jstack</code>、<code>netstat</code>（后端已有基础）</li>
+<li>定时任务：<code>crontab</code>、脚本编排、失败重试与告警</li>
+<li>集群相关：SSH 免密、<code>scp</code>、<code>rsync</code>、YARN 命令（<code>yarn application -list</code>）</li>
+</ul>
+<h3 id="2-3-数据思维：建立「分层」的直觉"><a href="#2-3-数据思维：建立「分层」的直觉" class="headerlink" title="2.3 数据思维：建立「分层」的直觉"></a>2.3 数据思维：建立「分层」的直觉</h3><p>后端写代码会分层（Controller/Service/DAO），数仓同样分层（ODS/DWD/DWS/ADS）。<strong>先接受「数据是分层的、可重跑的、按分区组织的」这个观念，后面所有组件都会变得顺理成章。</strong></p>
+<h2 id="03-阶段二：生态期（3-4-周）——Hadoop-Hive-Kafka-HBase"><a href="#03-阶段二：生态期（3-4-周）——Hadoop-Hive-Kafka-HBase" class="headerlink" title="03 阶段二：生态期（3~4 周）——Hadoop / Hive / Kafka / HBase"></a>03 阶段二：生态期（3~4 周）——Hadoop / Hive / Kafka / HBase</h2><p>原则：<strong>理解原理 + 会写 SQL + 会排查，不要一上来啃源码。</strong></p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>作用</th>
+<th>掌握到什么程度</th>
+<th>面试常问</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>HDFS</strong></td>
+<td>分布式文件系统，所有组件的存储底座</td>
+<td>架构（NameNode/DataNode）、块与副本、读写流程、小文件问题</td>
+<td>为什么不适合存小文件？读写流程？副本机制？</td>
+</tr>
+<tr>
+<td><strong>MapReduce</strong></td>
+<td>第一代批计算模型</td>
+<td>理解执行流程与 shuffle 即可，<strong>基本不用写</strong></td>
+<td>shuffle 过程、为什么慢</td>
+</tr>
+<tr>
+<td><strong>YARN</strong></td>
+<td>集群资源调度</td>
+<td>资源队列、Container、提交作业、查看日志</td>
+<td>提交作业到执行的流程</td>
+</tr>
+<tr>
+<td><strong>Hive</strong></td>
+<td>SQL on Hadoop，<strong>数仓主力</strong></td>
+<td>内外部表、分区/分桶、存储格式、执行引擎、数据倾斜</td>
+<td>内部表 vs 外部表？分区分桶区别？倾斜怎么处理？</td>
+</tr>
+<tr>
+<td><strong>Kafka</strong></td>
+<td>数据管道与实时数据源，<strong>重点</strong></td>
+<td>分区/副本/ISR、offset、消费组、顺序性、幂等与精确一次</td>
+<td>如何保证不丢不重？rebalance？顺序消息？</td>
+</tr>
+<tr>
+<td><strong>HBase</strong></td>
+<td>海量 KV 存储</td>
+<td>rowkey 设计、热点问题、适用场景</td>
+<td>rowkey 怎么设计？与 MySQL 的区别？</td>
+</tr>
+<tr>
+<td><strong>ZooKeeper</strong></td>
+<td>元数据与协调</td>
+<td>只做了解，知道它管什么</td>
+<td>——</td>
+</tr>
+</tbody></table>
+<h3 id="3-1-Hive-建表：分区-分桶-列式存储"><a href="#3-1-Hive-建表：分区-分桶-列式存储" class="headerlink" title="3.1 Hive 建表：分区 + 分桶 + 列式存储"></a>3.1 Hive 建表：分区 + 分桶 + 列式存储</h3><div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE TABLE</span> dwd_order_d (</span><br><span class="line">  order_id   <span class="type">BIGINT</span>,</span><br><span class="line">  uid        <span class="type">BIGINT</span>,</span><br><span class="line">  category_id <span class="type">INT</span>,</span><br><span class="line">  amount     <span class="type">DECIMAL</span>(<span class="number">18</span>,<span class="number">2</span>)</span><br><span class="line">)</span><br><span class="line">PARTITIONED <span class="keyword">BY</span> (dt STRING)                 <span class="comment">-- 按天分区，查询裁剪的关键</span></span><br><span class="line">CLUSTERED <span class="keyword">BY</span> (uid) <span class="keyword">INTO</span> <span class="number">64</span> BUCKETS         <span class="comment">-- 分桶，利于 JOIN 与抽样</span></span><br><span class="line">STORED <span class="keyword">AS</span> ORC                              <span class="comment">-- 列式存储，压缩比与扫描效率都好</span></span><br><span class="line">TBLPROPERTIES (<span class="string">&#x27;orc.compress&#x27;</span> <span class="operator">=</span> <span class="string">&#x27;SNAPPY&#x27;</span>);</span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p>记住三条：<strong>分区是为了裁剪，分桶是为了 JOIN 和抽样，列存是为了少读数据。</strong></p>
+</blockquote>
+<h3 id="3-2-Kafka-必须搞懂的三个问题"><a href="#3-2-Kafka-必须搞懂的三个问题" class="headerlink" title="3.2 Kafka 必须搞懂的三个问题"></a>3.2 Kafka 必须搞懂的三个问题</h3><ol>
+<li><strong>不丢</strong>：生产者 <code>acks=all</code> + 重试；服务端副本数 ≥ 3、<code>min.insync.replicas=2</code>；消费者手动提交 offset。</li>
+<li><strong>不重</strong>：开启幂等生产者（<code>enable.idempotence=true</code>）+ 事务，实现端到端精确一次；业务侧仍要<strong>幂等兜底</strong>。</li>
+<li><strong>有序</strong>：顺序只保证在<strong>单个分区内</strong>，需要全局有序就用同一个 key 路由到同一分区，或者干脆只用一个分区（牺牲吞吐）。</li>
+</ol>
+<h2 id="04-阶段三：计算期（4-6-周）——Spark-与-Flink-是核心战场"><a href="#04-阶段三：计算期（4-6-周）——Spark-与-Flink-是核心战场" class="headerlink" title="04 阶段三：计算期（4~6 周）——Spark 与 Flink 是核心战场"></a>04 阶段三：计算期（4~6 周）——Spark 与 Flink 是核心战场</h2><h3 id="4-1-Spark：离线批处理主力"><a href="#4-1-Spark：离线批处理主力" class="headerlink" title="4.1 Spark：离线批处理主力"></a>4.1 Spark：离线批处理主力</h3><p><strong>必须掌握的四层：</strong></p>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心抽象</td>
+<td>RDD / DataFrame / DataSet 的区别，惰性求值与 DAG</td>
+</tr>
+<tr>
+<td>执行模型</td>
+<td>Job → Stage → Task，宽依赖/窄依赖，shuffle 的代价</td>
+</tr>
+<tr>
+<td>运行架构</td>
+<td>Driver / Executor / 资源模式（YARN、K8s）、提交参数（executor 数、核数、内存）</td>
+</tr>
+<tr>
+<td>调优</td>
+<td>数据倾斜、shuffle 分区数、小文件合并、广播变量、缓存、内存与 GC</td>
+</tr>
+</tbody></table>
+<p><strong>代码示例：用 DataFrame API 做一次离线聚合</strong></p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// Spark 3.x Java API：按品类统计当日 GMV 与买家数</span></span><br><span class="line"><span class="type">SparkSession</span> <span class="variable">spark</span> <span class="operator">=</span> SparkSession.builder()</span><br><span class="line">        .appName(<span class="string">&quot;CategorySalesDaily&quot;</span>)</span><br><span class="line">        .enableHiveSupport()</span><br><span class="line">        .getOrCreate();</span><br><span class="line"></span><br><span class="line">Dataset&lt;Row&gt; result = spark.read().table(<span class="string">&quot;dwd_order_detail_d&quot;</span>)</span><br><span class="line">        .filter(<span class="string">&quot;dt = &#x27;2026-10-14&#x27;&quot;</span>)</span><br><span class="line">        .groupBy(<span class="string">&quot;category_id&quot;</span>)</span><br><span class="line">        .agg(functions.sum(<span class="string">&quot;amount&quot;</span>).alias(<span class="string">&quot;gmv&quot;</span>),</span><br><span class="line">             functions.countDistinct(<span class="string">&quot;uid&quot;</span>).alias(<span class="string">&quot;buyers&quot;</span>));</span><br><span class="line"></span><br><span class="line">result.write().mode(<span class="string">&quot;overwrite&quot;</span>).saveAsTable(<span class="string">&quot;dws_category_sales_d&quot;</span>);</span><br></pre></td></tr></table></figure></div>
+
+<p><strong>数据倾斜的两阶段聚合（面试必考）</strong></p>
+<div class="code-container" data-rel="Scala"><figure class="iseeu highlight scala"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 倾斜根因：某些 key 的数据量远超其他 key，导致个别 Task 拖死整个 Stage</span></span><br><span class="line"><span class="comment">// 解法：先加盐打散做局部聚合，再去盐做全局聚合</span></span><br><span class="line"><span class="keyword">val</span> salted = df.withColumn(<span class="string">&quot;salt&quot;</span>, (rand() * <span class="number">10</span>).cast(<span class="string">&quot;int&quot;</span>))</span><br><span class="line">  .groupBy(<span class="string">&quot;key&quot;</span>, <span class="string">&quot;salt&quot;</span>)</span><br><span class="line">  .agg(sum(<span class="string">&quot;cnt&quot;</span>).as(<span class="string">&quot;partial&quot;</span>))</span><br><span class="line"></span><br><span class="line">salted.groupBy(<span class="string">&quot;key&quot;</span>)</span><br><span class="line">  .agg(sum(<span class="string">&quot;partial&quot;</span>).as(<span class="string">&quot;cnt&quot;</span>))</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="4-2-Flink：实时流处理主力"><a href="#4-2-Flink：实时流处理主力" class="headerlink" title="4.2 Flink：实时流处理主力"></a>4.2 Flink：实时流处理主力</h3><p><strong>必须掌握的五块：</strong></p>
+<table>
+<thead>
+<tr>
+<th>知识点</th>
+<th>关键问题</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>时间语义</td>
+<td>Event Time / Processing Time / Ingestion Time 的区别</td>
+</tr>
+<tr>
+<td>水位线 Watermark</td>
+<td>解决乱序，<code>forBoundedOutOfOrderness</code> 的含义</td>
+</tr>
+<tr>
+<td>窗口 Window</td>
+<td>滚动/滑动/会话窗口，增量聚合 vs 全量聚合</td>
+</tr>
+<tr>
+<td>状态 State</td>
+<td>KeyedState、状态后端、状态大小与 TTL</td>
+</tr>
+<tr>
+<td>一致性</td>
+<td>Checkpoint / Savepoint、精确一次、端到端两阶段提交</td>
+</tr>
+</tbody></table>
+<p><strong>代码示例：Kafka → Flink → 结果库的最小实时链路</strong></p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">StreamExecutionEnvironment</span> <span class="variable">env</span> <span class="operator">=</span> StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">env.enableCheckpointing(<span class="number">60_000</span>, CheckpointingMode.EXACTLY_ONCE);</span><br><span class="line"></span><br><span class="line">DataStream&lt;OrderEvent&gt; orders = env</span><br><span class="line">    .addSource(<span class="keyword">new</span> <span class="title class_">FlinkKafkaConsumer</span>&lt;&gt;(<span class="string">&quot;order_topic&quot;</span>, <span class="keyword">new</span> <span class="title class_">OrderEventSchema</span>(), kafkaProps))</span><br><span class="line">    .assignTimestampsAndWatermarks(</span><br><span class="line">        WatermarkStrategy.&lt;OrderEvent&gt;forBoundedOutOfOrderness(Duration.ofSeconds(<span class="number">5</span>))</span><br><span class="line">            .withTimestampAssigner((event, ts) -&gt; event.getEventTime()));</span><br><span class="line"></span><br><span class="line">orders.keyBy(OrderEvent::getCategoryId)</span><br><span class="line">      .window(TumblingEventTimeWindows.of(Time.minutes(<span class="number">1</span>)))</span><br><span class="line">      .aggregate(<span class="keyword">new</span> <span class="title class_">GmvAggregate</span>())      <span class="comment">// 增量聚合，状态小、性能好</span></span><br><span class="line">      .addSink(<span class="keyword">new</span> <span class="title class_">ClickHouseSink</span>());</span><br></pre></td></tr></table></figure></div>
+
+<p><strong>Spark Streaming vs Flink 怎么选</strong></p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Spark Streaming</th>
+<th>Flink</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>计算模型</td>
+<td>微批（micro-batch）</td>
+<td>原生流（一条一条处理）</td>
+</tr>
+<tr>
+<td>延迟</td>
+<td>秒级</td>
+<td>毫秒~秒级</td>
+</tr>
+<tr>
+<td>时间语义</td>
+<td>弱（以处理时间为主）</td>
+<td>强（Event Time + Watermark）</td>
+</tr>
+<tr>
+<td>状态管理</td>
+<td>较弱</td>
+<td>强（状态后端、TTL、大状态）</td>
+</tr>
+<tr>
+<td>一致性</td>
+<td>精确一次（需配置）</td>
+<td>精确一次（两阶段提交，成熟）</td>
+</tr>
+<tr>
+<td>现状</td>
+<td>离线生态无可替代，实时已被 Flink 超越</td>
+<td><strong>实时首选</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>结论：<strong>离线用 Spark，实时用 Flink</strong>，两个都要会，别只学一个。</p>
+</blockquote>
+<h3 id="4-3-Scala-学到什么程度够用"><a href="#4-3-Scala-学到什么程度够用" class="headerlink" title="4.3 Scala 学到什么程度够用"></a>4.3 Scala 学到什么程度够用</h3><table>
+<thead>
+<tr>
+<th>优先学（够用）</th>
+<th>暂时别碰（性价比低）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>case class</code>、模式匹配、<code>Option</code></td>
+<td>类型系统、型变、隐式转换的高级用法</td>
+</tr>
+<tr>
+<td>高阶函数：<code>map</code>/<code>filter</code>/<code>flatMap</code>/<code>reduce</code></td>
+<td>宏（macro）、Shapeless</td>
+</tr>
+<tr>
+<td><code>implicit</code> 的常见用法（如隐式参数）</td>
+<td>Cats / ZIO 等函数式框架</td>
+</tr>
+<tr>
+<td>能读懂 Spark/Flink 的 Scala 示例</td>
+<td>用 Scala 写复杂业务框架</td>
+</tr>
+</tbody></table>
+<p><strong>一句话：Scala 是「读源码和抄示例」的工具，不是你的主语言。</strong> Java API 一样能写完 Spark 和 Flink 任务。</p>
+<h2 id="05-阶段四：工程期（4-6-周）——数仓建模-湖仓-调度"><a href="#05-阶段四：工程期（4-6-周）——数仓建模-湖仓-调度" class="headerlink" title="05 阶段四：工程期（4~6 周）——数仓建模 + 湖仓 + 调度"></a>05 阶段四：工程期（4~6 周）——数仓建模 + 湖仓 + 调度</h2><p>这一阶段决定你是「会用组件的人」还是「能做项目的人」。</p>
+<h3 id="5-1-数仓分层（背下来）"><a href="#5-1-数仓分层（背下来）" class="headerlink" title="5.1 数仓分层（背下来）"></a>5.1 数仓分层（背下来）</h3><table>
+<thead>
+<tr>
+<th>分层</th>
+<th>全称</th>
+<th>职责</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>ODS</strong></td>
+<td>Operational Data Store</td>
+<td>贴源层，原样落地，不做加工</td>
+<td>从业务库/MQ 同步的原始表</td>
+</tr>
+<tr>
+<td><strong>DWD</strong></td>
+<td>Data Warehouse Detail</td>
+<td>明细层，清洗、去重、标准化、拉宽</td>
+<td>订单明细、支付明细</td>
+</tr>
+<tr>
+<td><strong>DWS</strong></td>
+<td>Data Warehouse Summary</td>
+<td>汇总层，按主题做轻度聚合</td>
+<td>用户日粒度行为汇总</td>
+</tr>
+<tr>
+<td><strong>DWT</strong></td>
+<td>Data Warehouse Topic</td>
+<td>主题层，跨域整合宽表</td>
+<td>用户全生命周期宽表</td>
+</tr>
+<tr>
+<td><strong>ADS</strong></td>
+<td>Application Data Store</td>
+<td>应用层，直接对接报表与接口</td>
+<td>各业务指标结果表</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>口诀：<strong>ODS 保真、DWD 清洗、DWS 汇总、ADS 出结果</strong>。分层的价值是「复用」——同一份明细可以支撑无数指标。</p>
+</blockquote>
+<h3 id="5-2-维度建模三件套"><a href="#5-2-维度建模三件套" class="headerlink" title="5.2 维度建模三件套"></a>5.2 维度建模三件套</h3><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>事实表</td>
+<td>记录业务过程，通常是可累加的数字</td>
+<td>订单事实、支付事实</td>
+</tr>
+<tr>
+<td>维度表</td>
+<td>描述事实的上下文，宽而冗余</td>
+<td>商品维度、用户维度、日期维度</td>
+</tr>
+<tr>
+<td>星型 / 雪花模型</td>
+<td>维度是否进一步规范化；<strong>数仓一般用星型</strong>，因为查询快、易理解</td>
+<td>——</td>
+</tr>
+</tbody></table>
+<p>事实表三种类型：<strong>事务事实表</strong>（一笔一笔）、<strong>周期快照表</strong>（每天一张库存快照）、<strong>累积快照表</strong>（订单从下单到完成的各阶段时间）。</p>
+<p>维度变化要用 <strong>SCD（缓慢变化维）</strong>：Type 1 直接覆盖、Type 2 加版本行保留历史、Type 3 加一列存前值。数仓最常用 <strong>Type 2</strong>。</p>
+<h3 id="5-3-湖仓一体（现在的加分项）"><a href="#5-3-湖仓一体（现在的加分项）" class="headerlink" title="5.3 湖仓一体（现在的加分项）"></a>5.3 湖仓一体（现在的加分项）</h3><table>
+<thead>
+<tr>
+<th>形态</th>
+<th>特点</th>
+<th>代表</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>传统数仓</td>
+<td>Hive + 分层建模，T+1 为主</td>
+<td>Hive / Spark</td>
+</tr>
+<tr>
+<td>数据湖</td>
+<td>存原始数据，schema on read，容易变「数据沼泽」</td>
+<td>HDFS + Parquet</td>
+</tr>
+<tr>
+<td><strong>湖仓一体</strong></td>
+<td>在数据湖上提供事务、schema 演进、时间旅行</td>
+<td>Iceberg / Hudi / Delta Lake</td>
+</tr>
+<tr>
+<td>实时数仓</td>
+<td>流式链路，分钟级时效</td>
+<td>Flink + Doris / ClickHouse / StarRocks</td>
+</tr>
+</tbody></table>
+<h3 id="5-4-调度与治理"><a href="#5-4-调度与治理" class="headerlink" title="5.4 调度与治理"></a>5.4 调度与治理</h3><ul>
+<li><strong>调度</strong>：DolphinScheduler / Airflow / Azkaban，重点掌握依赖编排、补数、SLA 告警、失败重试。</li>
+<li><strong>治理</strong>：元数据管理、数据血缘、数据质量校验（空值率/唯一性/波动）、指标口径统一。</li>
+<li><strong>排查</strong>：作业慢 → 看数据量、倾斜、shuffle、资源；结果错 → 看口径、上下游依赖、补数影响。</li>
+</ul>
+<h2 id="06-快速入门：6-个月学习计划表"><a href="#06-快速入门：6-个月学习计划表" class="headerlink" title="06 快速入门：6 个月学习计划表"></a>06 快速入门：6 个月学习计划表</h2><table>
+<thead>
+<tr>
+<th>周次</th>
+<th>主题</th>
+<th>实操任务</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>第 1~3 周</td>
+<td>Linux + SQL</td>
+<td>刷 50 道 SQL 题；写脚本分析 Nginx 日志</td>
+<td>能徒手写连续活跃、Top N、同环比</td>
+</tr>
+<tr>
+<td>第 4~6 周</td>
+<td>Hadoop + Hive</td>
+<td>Docker 搭单机集群；建 ODS/DWD 表并跑通 ETL</td>
+<td>能讲清 HDFS 读写、Hive 分区分桶</td>
+</tr>
+<tr>
+<td>第 7~8 周</td>
+<td>Kafka + HBase</td>
+<td>用 Kafka 造数据、写消费者；HBase rowkey 设计练习</td>
+<td>能答不丢不重不乱的方案</td>
+</tr>
+<tr>
+<td>第 9~12 周</td>
+<td>Spark</td>
+<td>写 5 个离线作业；故意制造数据倾斜再优化</td>
+<td>能定位并解决倾斜、小文件问题</td>
+</tr>
+<tr>
+<td>第 13~16 周</td>
+<td>Flink</td>
+<td>Kafka → Flink → 结果库实时链路；开 Checkpoint</td>
+<td>能讲清水位线、状态、精确一次</td>
+</tr>
+<tr>
+<td>第 17~20 周</td>
+<td>数仓 + 湖仓</td>
+<td>设计一套电商数仓分层模型；用 Iceberg 做时间旅行</td>
+<td>能画出分层架构图并解释每层职责</td>
+</tr>
+<tr>
+<td>第 21~24 周</td>
+<td>项目整合</td>
+<td>完整跑通离线 + 实时两个项目，写成文档</td>
+<td>简历上能写出 3 个技术亮点</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>在职学习建议：<strong>每周 15~20 小时</strong>（工作日晚上 1<del>2 小时 + 周末 8 小时），坚持 6</del>8 个月即可达到可面试水平。</p>
+</blockquote>
+<h2 id="07-项目实战：简历上必须有两个项目"><a href="#07-项目实战：简历上必须有两个项目" class="headerlink" title="07 项目实战：简历上必须有两个项目"></a>07 项目实战：简历上必须有两个项目</h2><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>技术栈</th>
+<th>亮点怎么写</th>
+<th>面试考点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>离线数仓（电商）</strong></td>
+<td>Hive + Spark + DolphinScheduler</td>
+<td>分层建模、维度建模、SCD2 拉链、倾斜优化、T+1 SLA</td>
+<td>分层理由、拉链表实现、倾斜处理</td>
+</tr>
+<tr>
+<td><strong>实时数仓（埋点/订单）</strong></td>
+<td>Kafka + Flink + ClickHouse/Doris</td>
+<td>端到端精确一次、大状态管理、反压排查、分钟级时效</td>
+<td>水位线、Checkpoint、精确一次、反压</td>
+</tr>
+</tbody></table>
+<p><strong>项目要有「数字」和「取舍」</strong>：</p>
+<ul>
+<li>数据规模：日增多少条、总数据量多少 TB、作业跑了多少节点；</li>
+<li>优化效果：倾斜优化后作业从 3 小时降到 40 分钟；</li>
+<li>方案取舍：为什么用 Flink 不用 Spark Streaming，为什么选 ClickHouse 不选 ES。</li>
+</ul>
+<h2 id="08-面试高频考点速查"><a href="#08-面试高频考点速查" class="headerlink" title="08 面试高频考点速查"></a>08 面试高频考点速查</h2><table>
+<thead>
+<tr>
+<th>方向</th>
+<th>高频问题</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hive / 数仓</td>
+<td>内外部表区别、分区分桶、数仓分层、拉链表、指标口径</td>
+</tr>
+<tr>
+<td>Spark</td>
+<td>宽窄依赖、shuffle、数据倾斜、小文件、内存模型、提交参数</td>
+</tr>
+<tr>
+<td>Flink</td>
+<td>时间语义、水位线、窗口、状态后端、Checkpoint、精确一次、反压</td>
+</tr>
+<tr>
+<td>Kafka</td>
+<td>不丢不重、ISR、rebalance、顺序消息、堆积处理</td>
+</tr>
+<tr>
+<td>HBase</td>
+<td>rowkey 设计、热点、与 MySQL/Redis 的取舍</td>
+</tr>
+<tr>
+<td>综合</td>
+<td>一条数据从产生到报表的完整链路、慢作业怎么排查</td>
+</tr>
+</tbody></table>
+<h2 id="09-避坑清单"><a href="#09-避坑清单" class="headerlink" title="09 避坑清单"></a>09 避坑清单</h2><ol>
+<li><strong>别一上来啃 Spark/Flink 源码</strong>——先会用、会调优，源码留到有实战问题后再读。</li>
+<li><strong>别先学 Scala 语法细节</strong>——够用即可，Java API 一样能干活。</li>
+<li><strong>别只看视频不动手</strong>——大数据是「跑出来的」，本地用 Docker 也要搭起来。</li>
+<li><strong>别只学组件不学数仓</strong>——不会建模，永远是取数工程师，不是数据工程师。</li>
+<li><strong>别忽视 SQL</strong>——它是这个行业的第一语言，比任何编程语言都重要。</li>
+<li><strong>别跳过 Linux</strong>——集群里没有 IDE，只有命令行。</li>
+<li><strong>别把大数据当「更高级的后端」</strong>——思维要从请求切到数据，从强一致切到最终一致。</li>
+<li><strong>别做教程级项目</strong>——把教程项目加上自己的规模、调优、取舍，才是你的项目。</li>
+</ol>
+<h2 id="10-一页速查"><a href="#10-一页速查" class="headerlink" title="10 一页速查"></a>10 一页速查</h2><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">四段路线（6 个月，每周 15~20 小时）</span><br><span class="line">  ├─ 地基：Linux + Shell + SQL（窗口函数/连续活跃/Top N） + 数据思维</span><br><span class="line">  ├─ 生态：HDFS / YARN / Hive（重点）/ Kafka（重点）/ HBase / ZooKeeper</span><br><span class="line">  ├─ 引擎：Spark（离线：RDD/DataFrame、宽窄依赖、倾斜、shuffle 调优）</span><br><span class="line">  │        Flink（实时：Event Time/Watermark、窗口、状态、Checkpoint、精确一次）</span><br><span class="line">  └─ 工程：数仓分层 ODS→DWD→DWS→ADS + 维度建模 + 湖仓一体 + 调度治理 + 项目</span><br><span class="line"></span><br><span class="line">复用你的老本行：JVM / 并发 / 分布式 / 稳定性治理 / 工程化 —— 这些是降维优势</span><br><span class="line"></span><br><span class="line">三条心法</span><br><span class="line">  ① SQL 优先于 Scala，调优优先于源码，项目优先于证书</span><br><span class="line">  ② 从「接口/对象」切到「表/分区/批次」</span><br><span class="line">  ③ 面试五件套：数仓分层、Spark 倾斜、Flink 状态一致性、Kafka 可靠性、端到端链路</span><br></pre></td></tr></table></figure></div>
+
+<p>最后一句：<strong>10 年后端转大数据，不是从零开始，而是把「服务端的功底」搬到「数据的战场」上。</strong> 把 SQL 和数仓补起来，把 Spark/Flink 练熟，你的工程能力就是别人追不上的护城河。</p>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day16：10年Java后端转大数据的学习路线与快速入门</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-10-14 16:36:35</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-10-14 16:36:35
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/10/14/复习知识点Day16-10年Java后端转大数据的学习路线与快速入门/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
+</div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%9D%A2%E8%AF%95/">#面试</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">#复习知识点</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%A7%E6%95%B0%E6%8D%AE/">#大数据</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Spark/">#Spark</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Flink/">#Flink</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Hadoop/">#Hadoop</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Kafka/">#Kafka</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E8%81%8C%E4%B8%9A%E5%8F%91%E5%B1%95/">#职业发展</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%AD%A6%E4%B9%A0%E8%B7%AF%E7%BA%BF/">#学习路线</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/10/13/%E5%8D%95%E4%BD%93%E6%8B%86%E5%BE%AE%E6%9C%8D%E5%8A%A1%E4%B8%8EDDD%E6%A0%B8%E5%BF%83%E6%80%9D%E6%83%B3/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">单体拆微服务：拆分思路、DDD 核心思想与贫血/充血模型的取舍</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
+	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day16：10年Java后端转大数据的学习路线与快速入门</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%88%E8%AF%B4%E7%BB%93%E8%AE%BA"><span class="nav-text">先说结论</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#01-%E5%85%88%E8%AE%A4%E6%B8%85%EF%BC%9A10-%E5%B9%B4-Java-%E5%90%8E%E7%AB%AF%E7%9A%84%E4%BC%98%E5%8A%BF%E4%B8%8E%E7%9F%AD%E6%9D%BF"><span class="nav-text">01 先认清：10 年 Java 后端的优势与短板</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%8F%AF%E7%9B%B4%E6%8E%A5%E5%A4%8D%E7%94%A8%E7%9A%84%E8%83%BD%E5%8A%9B%EF%BC%88%E5%88%AB%E6%B5%AA%E8%B4%B9%EF%BC%89"><span class="nav-text">1.1 可直接复用的能力（别浪费）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E5%BF%85%E9%A1%BB%E8%A1%A5%E7%9A%84%E7%9F%AD%E6%9D%BF"><span class="nav-text">1.2 必须补的短板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E5%BF%83%E6%80%81%E4%B8%8A%E8%A6%81%E8%BD%AC%E7%9A%84%E4%B8%89%E4%B8%AA%E5%BC%AF"><span class="nav-text">1.3 心态上要转的三个弯</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#02-%E9%98%B6%E6%AE%B5%E4%B8%80%EF%BC%9A%E5%9C%B0%E5%9F%BA%E6%9C%9F%EF%BC%882-3-%E5%91%A8%EF%BC%89%E2%80%94%E2%80%94SQL%E3%80%81Linux%E3%80%81%E6%95%B0%E6%8D%AE%E6%80%9D%E7%BB%B4"><span class="nav-text">02 阶段一：地基期（2~3 周）——SQL、Linux、数据思维</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-SQL-%E6%98%AF%E9%87%8D%E4%B8%AD%E4%B9%8B%E9%87%8D%EF%BC%88%E5%8D%A0%E5%9C%B0%E5%9F%BA%E6%9C%9F-60-%E7%9A%84%E6%97%B6%E9%97%B4%EF%BC%89"><span class="nav-text">2.1 SQL 是重中之重（占地基期 60% 的时间）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-Linux-Shell"><span class="nav-text">2.2 Linux + Shell</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%95%B0%E6%8D%AE%E6%80%9D%E7%BB%B4%EF%BC%9A%E5%BB%BA%E7%AB%8B%E3%80%8C%E5%88%86%E5%B1%82%E3%80%8D%E7%9A%84%E7%9B%B4%E8%A7%89"><span class="nav-text">2.3 数据思维：建立「分层」的直觉</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#03-%E9%98%B6%E6%AE%B5%E4%BA%8C%EF%BC%9A%E7%94%9F%E6%80%81%E6%9C%9F%EF%BC%883-4-%E5%91%A8%EF%BC%89%E2%80%94%E2%80%94Hadoop-Hive-Kafka-HBase"><span class="nav-text">03 阶段二：生态期（3~4 周）——Hadoop &#x2F; Hive &#x2F; Kafka &#x2F; HBase</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Hive-%E5%BB%BA%E8%A1%A8%EF%BC%9A%E5%88%86%E5%8C%BA-%E5%88%86%E6%A1%B6-%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8"><span class="nav-text">3.1 Hive 建表：分区 + 分桶 + 列式存储</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-Kafka-%E5%BF%85%E9%A1%BB%E6%90%9E%E6%87%82%E7%9A%84%E4%B8%89%E4%B8%AA%E9%97%AE%E9%A2%98"><span class="nav-text">3.2 Kafka 必须搞懂的三个问题</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#04-%E9%98%B6%E6%AE%B5%E4%B8%89%EF%BC%9A%E8%AE%A1%E7%AE%97%E6%9C%9F%EF%BC%884-6-%E5%91%A8%EF%BC%89%E2%80%94%E2%80%94Spark-%E4%B8%8E-Flink-%E6%98%AF%E6%A0%B8%E5%BF%83%E6%88%98%E5%9C%BA"><span class="nav-text">04 阶段三：计算期（4~6 周）——Spark 与 Flink 是核心战场</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-Spark%EF%BC%9A%E7%A6%BB%E7%BA%BF%E6%89%B9%E5%A4%84%E7%90%86%E4%B8%BB%E5%8A%9B"><span class="nav-text">4.1 Spark：离线批处理主力</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-Flink%EF%BC%9A%E5%AE%9E%E6%97%B6%E6%B5%81%E5%A4%84%E7%90%86%E4%B8%BB%E5%8A%9B"><span class="nav-text">4.2 Flink：实时流处理主力</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-Scala-%E5%AD%A6%E5%88%B0%E4%BB%80%E4%B9%88%E7%A8%8B%E5%BA%A6%E5%A4%9F%E7%94%A8"><span class="nav-text">4.3 Scala 学到什么程度够用</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#05-%E9%98%B6%E6%AE%B5%E5%9B%9B%EF%BC%9A%E5%B7%A5%E7%A8%8B%E6%9C%9F%EF%BC%884-6-%E5%91%A8%EF%BC%89%E2%80%94%E2%80%94%E6%95%B0%E4%BB%93%E5%BB%BA%E6%A8%A1-%E6%B9%96%E4%BB%93-%E8%B0%83%E5%BA%A6"><span class="nav-text">05 阶段四：工程期（4~6 周）——数仓建模 + 湖仓 + 调度</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E6%95%B0%E4%BB%93%E5%88%86%E5%B1%82%EF%BC%88%E8%83%8C%E4%B8%8B%E6%9D%A5%EF%BC%89"><span class="nav-text">5.1 数仓分层（背下来）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E7%BB%B4%E5%BA%A6%E5%BB%BA%E6%A8%A1%E4%B8%89%E4%BB%B6%E5%A5%97"><span class="nav-text">5.2 维度建模三件套</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E6%B9%96%E4%BB%93%E4%B8%80%E4%BD%93%EF%BC%88%E7%8E%B0%E5%9C%A8%E7%9A%84%E5%8A%A0%E5%88%86%E9%A1%B9%EF%BC%89"><span class="nav-text">5.3 湖仓一体（现在的加分项）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E8%B0%83%E5%BA%A6%E4%B8%8E%E6%B2%BB%E7%90%86"><span class="nav-text">5.4 调度与治理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#06-%E5%BF%AB%E9%80%9F%E5%85%A5%E9%97%A8%EF%BC%9A6-%E4%B8%AA%E6%9C%88%E5%AD%A6%E4%B9%A0%E8%AE%A1%E5%88%92%E8%A1%A8"><span class="nav-text">06 快速入门：6 个月学习计划表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#07-%E9%A1%B9%E7%9B%AE%E5%AE%9E%E6%88%98%EF%BC%9A%E7%AE%80%E5%8E%86%E4%B8%8A%E5%BF%85%E9%A1%BB%E6%9C%89%E4%B8%A4%E4%B8%AA%E9%A1%B9%E7%9B%AE"><span class="nav-text">07 项目实战：简历上必须有两个项目</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#08-%E9%9D%A2%E8%AF%95%E9%AB%98%E9%A2%91%E8%80%83%E7%82%B9%E9%80%9F%E6%9F%A5"><span class="nav-text">08 面试高频考点速查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#09-%E9%81%BF%E5%9D%91%E6%B8%85%E5%8D%95"><span class="nav-text">09 避坑清单</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E4%B8%80%E9%A1%B5%E9%80%9F%E6%9F%A5"><span class="nav-text">10 一页速查</span></a></li></ol>
+
+	</div>
+</div>
+	</div>
+	
+</div>
+
+			</div>
+
+			
+		</div>
+
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2017</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">Percy jie</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 27 篇文章
+                    </span>
+                    
+                        <span>
+                            共 67.8k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
+
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
+	
+
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>

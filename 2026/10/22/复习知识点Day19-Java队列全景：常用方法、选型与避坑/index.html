@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="AI, Java, Security, Blog">
+    
+    
+    <meta name="author" content="Percy jie">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://percyjie.github.io/2026/10/22/复习知识点day19-java队列全景：常用方法、选型与避坑/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day19：Java队列全景：常用方法、选型与避坑">
+<meta property="og:url" content="https://percyjie.github.io/2026/10/22/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day19-Java%E9%98%9F%E5%88%97%E5%85%A8%E6%99%AF%EF%BC%9A%E5%B8%B8%E7%94%A8%E6%96%B9%E6%B3%95%E3%80%81%E9%80%89%E5%9E%8B%E4%B8%8E%E9%81%BF%E5%9D%91/index.html">
+<meta property="og:site_name" content="Percy&#39;s Note">
+<meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-10-22T09:30:50.000Z">
+<meta property="article:modified_time" content="2026-10-22T09:30:50.000Z">
+<meta property="article:author" content="Percy jie">
+<meta property="article:tag" content="BlockingQueue">
+<meta property="article:tag" content="Java">
+<meta property="article:tag" content="复习知识点">
+<meta property="article:tag" content="并发">
+<meta property="article:tag" content="队列">
+<meta property="article:tag" content="集合">
+<meta property="article:tag" content="面试">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            复习知识点Day19：Java队列全景：常用方法、选型与避坑 | Percy&#39;s Note
+        
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"percyjie.github.io","root":"/","language":"zh-CN"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"vs2015"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/redefine-og.webp","description":"人没有梦想，和咸鱼有什么分别"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Percy's Note","subtitle":{"text":["人没有梦想，和咸鱼有什么分别"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"default","links":[{"icon":"fa-brands fa-github","url":"https://github.com/percyjie"},{"icon":"fa-brands fa-weibo","url":"https://weibo.com/panjie0709"},{"icon":null,"url":null},{"icon":null,"url":null},{"icon":null,"url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"cloud","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":{"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}}},"article_date_format":"auto","excerpt_length":200,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart fa-beat\" style=\"--fa-animation-duration: 0.5s; color: #f54545\"></i>","start":"2017/03/08 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2017/03/08 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                Percy&#39;s Note
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/tags"
+                                        >
+                                    <i class="fa-regular fa-tags fa-fw"></i>
+                                    标签
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/tags"
+                        >
+                            <span>
+                                标签
+                            </span>
+                            
+                                <i class="fa-regular fa-tags fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">103</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">12</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">31</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+
+			<div class="main-content">
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
+
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day19：Java队列全景：常用方法、选型与避坑</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv3</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-10-22 17:30:50</span>
+        <span class="mobile">2026-10-22 17:30:50</span>
+        <span class="hover-info">创建</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-10-22 17:30:50</span>
+            <span class="mobile">2026-10-22 17:30:50</span>
+            <span class="hover-info">更新</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Java/">Java</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/Java/">Java</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">复习知识点</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%B9%B6%E5%8F%91/">并发</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E9%98%9F%E5%88%97/">队列</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/BlockingQueue/">BlockingQueue</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E9%9B%86%E5%90%88/">集合</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>6.2k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>24 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天：<strong>Java 队列 = “三套方法 + 一个家族图谱 + 一条铁律”</strong>。三套方法是”满了怎么办”（add / offer / put）和”空了怎么办”（remove / poll / take）以及”只看不动”（element / peek）；家族图谱是 ArrayDeque、PriorityQueue、ArrayBlockingQueue、LinkedBlockingQueue、SynchronousQueue、DelayQueue、ConcurrentLinkedQueue 各自的边界；铁律是<strong>生产环境必须有界 + 必须监控排队时长</strong>。绝大多数线上事故不是”队列不会用”，而是”用了无界队列”或”消费者挂了生产者还在 put”。</p>
+</blockquote>
+<h2 id="先说结论"><a href="#先说结论" class="headerlink" title="先说结论"></a>先说结论</h2><table>
+<thead>
+<tr>
+<th>高频问题</th>
+<th>一句话答案</th>
+<th>面试官想追问</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>add / offer / put 区别</td>
+<td>满时分别：抛异常、返回 false、阻塞等待</td>
+<td>超时版怎么写</td>
+</tr>
+<tr>
+<td>remove / poll / take 区别</td>
+<td>空时分别：抛异常、返回 null、阻塞等待</td>
+<td>为什么 BlockingQueue 禁止 null</td>
+</tr>
+<tr>
+<td>单线程用什么队列</td>
+<td><code>ArrayDeque</code>，比 <code>LinkedList</code> 和 <code>Stack</code> 都快</td>
+<td>ArrayDeque 能不能多线程用</td>
+</tr>
+<tr>
+<td>线程池任务队列选什么</td>
+<td>有界 <code>ArrayBlockingQueue</code> 或显式容量的 <code>LinkedBlockingQueue</code></td>
+<td>无界会怎样</td>
+</tr>
+<tr>
+<td>延时任务怎么做</td>
+<td>JVM 内用 <code>DelayQueue</code>，跨进程/可靠用 MQ 延迟消息</td>
+<td>重启丢任务怎么办</td>
+</tr>
+<tr>
+<td>PriorityQueue 注意事项</td>
+<td>最小堆、非线程安全、迭代器不保证有序</td>
+<td>Top K 怎么用</td>
+</tr>
+<tr>
+<td>高并发无锁队列</td>
+<td><code>ConcurrentLinkedQueue</code>，非阻塞、弱一致迭代器</td>
+<td><code>size()</code> 为什么是 O(n)</td>
+</tr>
+<tr>
+<td>优雅关闭</td>
+<td>毒丸（poison pill）或 <code>offer(timeout)</code> + <code>shutdown</code> + 排空</td>
+<td>只用 shutdownNow 有什么后果</td>
+</tr>
+</tbody></table>
+<p>三句可背诵的话：</p>
+<ol>
+<li><strong>方法选错的本质是”满了/空了的行为选错”</strong>：要么该抛异常（暴露问题），要么该阻塞（背压），要么该返回 false（降级）。</li>
+<li><strong>队列选错的本质是”并发语义选错”</strong>：单线程用并发的浪费锁，多线程用非并发的丢数据。</li>
+<li><strong>线上出事的本质几乎都是”没设上界”</strong>：无界队列 = 把 OOM 延后，而不是解决问题。</li>
+</ol>
+<h2 id="01-队列家族图谱"><a href="#01-队列家族图谱" class="headerlink" title="01 队列家族图谱"></a>01 队列家族图谱</h2><h3 id="1-1-继承关系"><a href="#1-1-继承关系" class="headerlink" title="1.1 继承关系"></a>1.1 继承关系</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">java.util.Collection</span><br><span class="line"> ├─ Queue（队尾进、队头出）</span><br><span class="line"> │   ├─ Deque（双端队列，两头都能进/出）</span><br><span class="line"> │   │    ├─ ArrayDeque          循环数组，非线程安全</span><br><span class="line"> │   │    └─ LinkedList          双向链表，非线程安全，还能当 List</span><br><span class="line"> │   ├─ PriorityQueue            二叉堆，非线程安全</span><br><span class="line"> │   └─ BlockingQueue（阻塞队列，线程安全）</span><br><span class="line"> │        ├─ ArrayBlockingQueue       有界、循环数组、单锁</span><br><span class="line"> │        ├─ LinkedBlockingQueue      可选有界、链表、双锁</span><br><span class="line"> │        ├─ SynchronousQueue         容量 0，直接交接</span><br><span class="line"> │        ├─ PriorityBlockingQueue    可扩容、堆</span><br><span class="line"> │        ├─ DelayQueue               按到期时间出队</span><br><span class="line"> │        ├─ LinkedTransferQueue      非阻塞 + 可等待交接</span><br><span class="line"> │        └─ LinkedBlockingDeque      双端阻塞队列</span><br><span class="line"> └─ ConcurrentLinkedQueue（Queue 接口的无锁实现）</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="1-2-常用队列速查表"><a href="#1-2-常用队列速查表" class="headerlink" title="1.2 常用队列速查表"></a>1.2 常用队列速查表</h3><table>
+<thead>
+<tr>
+<th>队列</th>
+<th>线程安全</th>
+<th>是否阻塞</th>
+<th>是否有界</th>
+<th>底层结构</th>
+<th>典型场景</th>
+<th>最大注意点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ArrayDeque</code></td>
+<td>否</td>
+<td>否</td>
+<td>自动扩容</td>
+<td>循环数组</td>
+<td>单线程队列/栈</td>
+<td>禁 null，别跨线程用</td>
+</tr>
+<tr>
+<td><code>LinkedList</code></td>
+<td>否</td>
+<td>否</td>
+<td>无限</td>
+<td>双向链表</td>
+<td>双端 + 随机访问混合</td>
+<td>内存开销大、性能不如 ArrayDeque</td>
+</tr>
+<tr>
+<td><code>PriorityQueue</code></td>
+<td>否</td>
+<td>否</td>
+<td>自动扩容</td>
+<td>二叉堆</td>
+<td>Top K、任务优先级</td>
+<td>非线程安全、迭代器不排序</td>
+</tr>
+<tr>
+<td><code>ArrayBlockingQueue</code></td>
+<td>是</td>
+<td>是</td>
+<td><strong>构造必须指定</strong></td>
+<td>循环数组 + 单锁</td>
+<td>线程池、有界缓冲</td>
+<td>容量定了不能改、put 会挂死</td>
+</tr>
+<tr>
+<td><code>LinkedBlockingQueue</code></td>
+<td>是</td>
+<td>是</td>
+<td>默认<strong>无界</strong></td>
+<td>链表 + put/take 双锁</td>
+<td>生产者消费者、线程池</td>
+<td>不给容量就是 Integer.MAX</td>
+</tr>
+<tr>
+<td><code>SynchronousQueue</code></td>
+<td>是</td>
+<td>是</td>
+<td>容量 0</td>
+<td>交接配对</td>
+<td>CachedThreadPool、直接传递</td>
+<td>不存元素，offer 可能立刻失败</td>
+</tr>
+<tr>
+<td><code>PriorityBlockingQueue</code></td>
+<td>是</td>
+<td>是</td>
+<td>可扩容</td>
+<td>堆 + 锁</td>
+<td>优先级调度</td>
+<td>无界，需要自己控流量</td>
+</tr>
+<tr>
+<td><code>DelayQueue</code></td>
+<td>是</td>
+<td>是</td>
+<td>无限</td>
+<td>堆 + Condition</td>
+<td>延时任务、超时清理</td>
+<td>重启丢数据、<code>getDelay</code> 精度</td>
+</tr>
+<tr>
+<td><code>LinkedTransferQueue</code></td>
+<td>是</td>
+<td>是/否</td>
+<td>无限</td>
+<td>链表 + CAS</td>
+<td>高吞吐交接</td>
+<td><code>transfer</code> 会等到被消费</td>
+</tr>
+<tr>
+<td><code>ConcurrentLinkedQueue</code></td>
+<td>是</td>
+<td><strong>否</strong></td>
+<td>无限</td>
+<td>无锁队列（CAS）</td>
+<td>高并发非阻塞投递</td>
+<td><code>size()</code> 是 O(n)、无 put/take</td>
+</tr>
+<tr>
+<td><code>ConcurrentLinkedDeque</code></td>
+<td>是</td>
+<td>否</td>
+<td>无限</td>
+<td>无锁双端</td>
+<td>工作窃取</td>
+<td>同上</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>记忆锚点：<strong>“Array 系”有界省内存、锁竞争集中；”Linked 系”按需分配、读写锁分离吞吐更高；”无锁系”吞吐最高但没有阻塞语义。</strong></p>
+</blockquote>
+<h2 id="02-三套核心方法：满了怎么办、空了怎么办"><a href="#02-三套核心方法：满了怎么办、空了怎么办" class="headerlink" title="02 三套核心方法：满了怎么办、空了怎么办"></a>02 三套核心方法：满了怎么办、空了怎么办</h2><h3 id="2-1-插入：add-offer-put"><a href="#2-1-插入：add-offer-put" class="headerlink" title="2.1 插入：add / offer / put"></a>2.1 插入：add / offer / put</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>队列满时行为</th>
+<th>返回</th>
+<th>属于哪个接口</th>
+<th>什么时候用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>add(e)</code></td>
+<td>抛 <code>IllegalStateException</code></td>
+<td>boolean</td>
+<td><code>Queue</code></td>
+<td>想立刻暴露”塞不进去”</td>
+</tr>
+<tr>
+<td><code>offer(e)</code></td>
+<td>返回 <code>false</code></td>
+<td>boolean</td>
+<td><code>Queue</code> / <code>BlockingQueue</code></td>
+<td>非阻塞投递、可自行降级</td>
+</tr>
+<tr>
+<td><code>offer(e, timeout, unit)</code></td>
+<td>等待到超时后返回 <code>false</code></td>
+<td>boolean</td>
+<td><code>BlockingQueue</code></td>
+<td><strong>生产推荐</strong>：既有背压又不会永久挂死</td>
+</tr>
+<tr>
+<td><code>put(e)</code></td>
+<td>一直阻塞到有空间</td>
+<td>void</td>
+<td><code>BlockingQueue</code></td>
+<td>必须保证不丢数据、且消费者健康</td>
+</tr>
+</tbody></table>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 三种写法对应三种业务态度</span></span><br><span class="line">queue.add(task);                                  <span class="comment">// 满了抛异常，让调用方立刻感知</span></span><br><span class="line"><span class="keyword">if</span> (!queue.offer(task)) &#123; metrics.reject(); &#125;      <span class="comment">// 满了丢弃 + 打点</span></span><br><span class="line">queue.offer(task, <span class="number">200</span>, TimeUnit.MILLISECONDS);     <span class="comment">// 最多等 200ms，超时再降级</span></span><br><span class="line">queue.put(task);                                  <span class="comment">// 死等，消费者挂了生产者就卡在这</span></span><br></pre></td></tr></table></figure></div>
+
+<h3 id="2-2-取出：remove-poll-take"><a href="#2-2-取出：remove-poll-take" class="headerlink" title="2.2 取出：remove / poll / take"></a>2.2 取出：remove / poll / take</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>队列空时行为</th>
+<th>返回</th>
+<th>属于哪个接口</th>
+<th>什么时候用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>remove()</code></td>
+<td>抛 <code>NoSuchElementException</code></td>
+<td>E</td>
+<td><code>Queue</code></td>
+<td>逻辑上”不该为空”，为空即 bug</td>
+</tr>
+<tr>
+<td><code>poll()</code></td>
+<td>返回 <code>null</code></td>
+<td>E / null</td>
+<td><code>Queue</code> / <code>BlockingQueue</code></td>
+<td>非阻塞轮询</td>
+</tr>
+<tr>
+<td><code>poll(timeout, unit)</code></td>
+<td>等超时后返回 <code>null</code></td>
+<td>E / null</td>
+<td><code>BlockingQueue</code></td>
+<td>消费者主循环，方便检查停止标志</td>
+</tr>
+<tr>
+<td><code>take()</code></td>
+<td>一直阻塞到拿到元素</td>
+<td>E</td>
+<td><code>BlockingQueue</code></td>
+<td>标准消费者，空转成本最低</td>
+</tr>
+</tbody></table>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 消费者标准写法：poll 带超时，便于优雅停止</span></span><br><span class="line"><span class="keyword">while</span> (running || !queue.isEmpty()) &#123;</span><br><span class="line">    <span class="type">Task</span> <span class="variable">task</span> <span class="operator">=</span> queue.poll(<span class="number">200</span>, TimeUnit.MILLISECONDS);</span><br><span class="line">    <span class="keyword">if</span> (task == <span class="literal">null</span>) <span class="keyword">continue</span>;      <span class="comment">// 空转一次，顺便检查 running 标志</span></span><br><span class="line">    handle(task);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p><strong>不要用 <code>isEmpty()</code> + <code>poll()</code> 组合判断</strong>：多线程下”判空”和”取出”不是原子操作，会丢任务或误判。直接用 <code>poll()</code> 返回值判 null。</p>
+</blockquote>
+<h3 id="2-3-查看：element-peek"><a href="#2-3-查看：element-peek" class="headerlink" title="2.3 查看：element / peek"></a>2.3 查看：element / peek</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>队列空时</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>element()</code></td>
+<td>抛异常</td>
+<td>强制要有队头</td>
+</tr>
+<tr>
+<td><code>peek()</code></td>
+<td>返回 null</td>
+<td>只看不取，O(1)</td>
+</tr>
+<tr>
+<td><code>peekFirst()/peekLast()</code></td>
+<td>返回 null</td>
+<td><code>Deque</code> 双端查看</td>
+</tr>
+</tbody></table>
+<p><code>PriorityQueue</code> 的 <code>peek()</code> 返回的是<strong>堆顶（最小/最大）元素</strong>，不是”最后加入的元素”，这是最常见的理解错误。</p>
+<h3 id="2-4-Deque-的双端方法（ArrayDeque-专用）"><a href="#2-4-Deque-的双端方法（ArrayDeque-专用）" class="headerlink" title="2.4 Deque 的双端方法（ArrayDeque 专用）"></a>2.4 Deque 的双端方法（ArrayDeque 专用）</h3><p><code>Deque</code> 把 <code>Queue</code> 和 <code>Stack</code> 的方法统一了：</p>
+<table>
+<thead>
+<tr>
+<th>动作</th>
+<th>头部</th>
+<th>尾部</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>插入</td>
+<td><code>addFirst</code> / <code>offerFirst</code> / <code>push</code></td>
+<td><code>addLast</code> / <code>offerLast</code></td>
+</tr>
+<tr>
+<td>移除</td>
+<td><code>removeFirst</code> / <code>pollFirst</code> / <code>pop</code></td>
+<td><code>removeLast</code> / <code>pollLast</code></td>
+</tr>
+<tr>
+<td>查看</td>
+<td><code>getFirst</code> / <code>peekFirst</code></td>
+<td><code>getLast</code> / <code>peekLast</code></td>
+</tr>
+</tbody></table>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line">Deque&lt;Integer&gt; dq = <span class="keyword">new</span> <span class="title class_">ArrayDeque</span>&lt;&gt;();</span><br><span class="line">dq.offerLast(<span class="number">1</span>); dq.offerLast(<span class="number">2</span>);     <span class="comment">// 队列用法</span></span><br><span class="line"><span class="type">Integer</span> <span class="variable">head</span> <span class="operator">=</span> dq.pollFirst();        <span class="comment">// 1</span></span><br><span class="line"></span><br><span class="line">dq.push(<span class="number">10</span>); dq.push(<span class="number">20</span>);             <span class="comment">// 栈用法（LIFO）</span></span><br><span class="line"><span class="type">Integer</span> <span class="variable">top</span> <span class="operator">=</span> dq.pop();               <span class="comment">// 20</span></span><br></pre></td></tr></table></figure></div>
+
+<h3 id="2-5-为什么-BlockingQueue-不允许-null"><a href="#2-5-为什么-BlockingQueue-不允许-null" class="headerlink" title="2.5 为什么 BlockingQueue 不允许 null"></a>2.5 为什么 BlockingQueue 不允许 null</h3><p><code>LinkedBlockingQueue</code>、<code>ArrayBlockingQueue</code> 等都会对 <code>null</code> 抛 <code>NullPointerException</code>，原因是：</p>
+<ul>
+<li><code>poll()</code> / <code>take()</code> <strong>用 <code>null</code> 表示”队列空或超时”</strong>；</li>
+<li>如果允许存入 <code>null</code>，取出 <code>null</code> 就分不清”拿到了一个 null 元素”还是”没拿到东西”。</li>
+</ul>
+<p>所以<strong>毒丸（poison pill）不能用 null 表示</strong>，要定义一个专门的哨兵对象。</p>
+<h2 id="03-有界、背压与容量规划"><a href="#03-有界、背压与容量规划" class="headerlink" title="03 有界、背压与容量规划"></a>03 有界、背压与容量规划</h2><h3 id="3-1-无界队列的真实后果"><a href="#3-1-无界队列的真实后果" class="headerlink" title="3.1 无界队列的真实后果"></a>3.1 无界队列的真实后果</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">ExecutorService</span> <span class="variable">pool</span> <span class="operator">=</span> Executors.newFixedThreadPool(<span class="number">8</span>);</span><br><span class="line"><span class="comment">// 内部是 new LinkedBlockingQueue&lt;Runnable&gt;() —— 容量 Integer.MAX_VALUE</span></span><br></pre></td></tr></table></figure></div>
+
+<p>任务提交速度一旦持续大于消费速度：</p>
+<ol>
+<li>队列长度无限增长，<strong><code>maximumPoolSize</code> 和拒绝策略永远不触发</strong>；</li>
+<li>老年代被任务对象填满，Full GC 频繁；</li>
+<li>最终 OOM，而且<strong>排查时看到的是”内存问题”，根源是”容量策略缺失”</strong>。</li>
+</ol>
+<p>同理，<code>PriorityBlockingQueue</code>、<code>DelayQueue</code>、<code>ConcurrentLinkedQueue</code> 都是”事实无界”，必须有外部限流。</p>
+<h3 id="3-2-容量怎么定：用排队时长反推"><a href="#3-2-容量怎么定：用排队时长反推" class="headerlink" title="3.2 容量怎么定：用排队时长反推"></a>3.2 容量怎么定：用排队时长反推</h3><p>经验公式（利特尔法则的简化版）：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">队列容量 ≈ 峰值提交速率 × 可接受的最长排队时间</span><br></pre></td></tr></table></figure></div>
+
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>峰值提交</th>
+<th>可接受排队</th>
+<th>建议容量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>实时风控（200ms 内处理）</td>
+<td>2000/s</td>
+<td>0.1s</td>
+<td>200</td>
+</tr>
+<tr>
+<td>异步日志落库</td>
+<td>5000/s</td>
+<td>2s</td>
+<td>10000</td>
+</tr>
+<tr>
+<td>订单履约任务</td>
+<td>500/s</td>
+<td>10s</td>
+<td>5000</td>
+</tr>
+<tr>
+<td>批量数据导入</td>
+<td>1000/s</td>
+<td>60s</td>
+<td>60000（配合消费者扩容）</td>
+</tr>
+</tbody></table>
+<p>还要叠加三个约束：</p>
+<ul>
+<li><strong>单个任务对象大小</strong>：10000 × 10KB = 100MB，队列本身就能吃满内存；</li>
+<li><strong>消费者数量</strong>：容量要按”消费能力最弱时的缓冲”设计，不是按平均流量；</li>
+<li><strong>多实例分摊</strong>：10 台机器共担流量，单机容量可除以实例数（但要考虑单台宕机）。</li>
+</ul>
+<h3 id="3-3-队列满了以后怎么办（比设容量更重要）"><a href="#3-3-队列满了以后怎么办（比设容量更重要）" class="headerlink" title="3.3 队列满了以后怎么办（比设容量更重要）"></a>3.3 队列满了以后怎么办（比设容量更重要）</h3><table>
+<thead>
+<tr>
+<th>策略</th>
+<th>做法</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>快速失败</td>
+<td><code>add()</code> 抛异常 + 上层返回”系统繁忙”</td>
+<td>用户可重试的读请求</td>
+</tr>
+<tr>
+<td>超时降级</td>
+<td><code>offer(timeout)</code> 失败后走备用逻辑</td>
+<td>有兜底数据源的同步场景</td>
+</tr>
+<tr>
+<td>转持久化</td>
+<td>失败后落库/写 Kafka，等慢速消费</td>
+<td>不能丢的任务型数据</td>
+</tr>
+<tr>
+<td>丢弃 + 打点</td>
+<td>非核心指标类，计数告警</td>
+<td>埋点、监控日志</td>
+</tr>
+<tr>
+<td>反压上游</td>
+<td><code>put()</code> 或 <code>CallerRunsPolicy</code> 让调用方变慢</td>
+<td>上游可降速且能扛</td>
+</tr>
+<tr>
+<td>动态扩消费者</td>
+<td>观察积压自动加线程/加实例</td>
+<td>消费能力可弹性扩展</td>
+</tr>
+</tbody></table>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="type">boolean</span> <span class="title function_">submit</span><span class="params">(Task task)</span> &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (queue.offer(task, <span class="number">100</span>, TimeUnit.MILLISECONDS)) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        fallbackStore.save(task);          <span class="comment">// 满了落库，稍后补偿</span></span><br><span class="line">        metrics.queueFull().increment();   <span class="comment">// 必须打点，不能只打日志</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">        Thread.currentThread().interrupt();</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p>面试金句：<strong>“队列容量决定系统能忍多久，拒绝策略决定系统怎么死。生产必须两个都设计，而不是只设容量。”</strong></p>
+</blockquote>
+<h2 id="04-生产者-消费者：四种写法"><a href="#04-生产者-消费者：四种写法" class="headerlink" title="04 生产者-消费者：四种写法"></a>04 生产者-消费者：四种写法</h2><h3 id="4-1-wait-notify-手写（理解原理）"><a href="#4-1-wait-notify-手写（理解原理）" class="headerlink" title="4.1 wait / notify 手写（理解原理）"></a>4.1 wait / notify 手写（理解原理）</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ManualBuffer</span>&lt;T&gt; &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Deque&lt;T&gt; data = <span class="keyword">new</span> <span class="title class_">ArrayDeque</span>&lt;&gt;();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="type">int</span> capacity;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">ManualBuffer</span><span class="params">(<span class="type">int</span> capacity)</span> &#123; <span class="built_in">this</span>.capacity = capacity; &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title function_">put</span><span class="params">(T t)</span> <span class="keyword">throws</span> InterruptedException &#123;</span><br><span class="line">        <span class="keyword">while</span> (data.size() &gt;= capacity) &#123;   <span class="comment">// 必须用 while，防止虚假唤醒</span></span><br><span class="line">            wait();</span><br><span class="line">        &#125;</span><br><span class="line">        data.addLast(t);</span><br><span class="line">        notifyAll();                        <span class="comment">// 用 notifyAll，不用 notify</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">synchronized</span> T <span class="title function_">take</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException &#123;</span><br><span class="line">        <span class="keyword">while</span> (data.isEmpty()) &#123;</span><br><span class="line">            wait();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">T</span> <span class="variable">t</span> <span class="operator">=</span> data.pollFirst();</span><br><span class="line">        notifyAll();</span><br><span class="line">        <span class="keyword">return</span> t;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>三个必背细节：</p>
+<ol>
+<li><strong><code>while</code> 而不是 <code>if</code></strong>：<code>wait()</code> 可能被虚假唤醒，也可能唤醒时条件已不成立；</li>
+<li><strong><code>notifyAll()</code> 而不是 <code>notify()</code></strong>：多个消费者时用 <code>notify()</code> 可能唤醒”错的那个”，导致大家一起等待；</li>
+<li>生产环境<strong>不要手写这套</strong>，直接用 <code>BlockingQueue</code>，除非你需要自定义等待条件。</li>
+</ol>
+<h3 id="4-2-BlockingQueue（标准写法）"><a href="#4-2-BlockingQueue（标准写法）" class="headerlink" title="4.2 BlockingQueue（标准写法）"></a>4.2 BlockingQueue（标准写法）</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line">BlockingQueue&lt;Task&gt; queue = <span class="keyword">new</span> <span class="title class_">ArrayBlockingQueue</span>&lt;&gt;(<span class="number">256</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 生产者</span></span><br><span class="line">queue.put(task);                       <span class="comment">// 满了自动等，天然背压</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 消费者</span></span><br><span class="line"><span class="keyword">while</span> (!Thread.currentThread().isInterrupted()) &#123;</span><br><span class="line">    <span class="type">Task</span> <span class="variable">task</span> <span class="operator">=</span> queue.take();          <span class="comment">// 空了自动等，不空转</span></span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        handle(task);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">        log.error(<span class="string">&quot;handle failed&quot;</span>, e); <span class="comment">// 必须捕获，否则消费者线程直接死掉</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p><strong>消费者线程死掉是队列最隐蔽的故障</strong>：一旦异常穿透 <code>while</code> 循环，队列开始积压，生产者 <code>put</code> 逐渐挂死，上游线程池被占满，最后整链路超时。所以消费者循环里<strong>必须 catch 单个任务异常</strong>。</p>
+</blockquote>
+<h3 id="4-3-批量取出降低锁竞争：drainTo"><a href="#4-3-批量取出降低锁竞争：drainTo" class="headerlink" title="4.3 批量取出降低锁竞争：drainTo"></a>4.3 批量取出降低锁竞争：drainTo</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line">List&lt;Task&gt; batch = <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;(<span class="number">128</span>);</span><br><span class="line"><span class="keyword">while</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">    <span class="type">int</span> <span class="variable">n</span> <span class="operator">=</span> queue.drainTo(batch, <span class="number">128</span>);          <span class="comment">// 一次锁操作取一批</span></span><br><span class="line">    <span class="keyword">if</span> (n == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="type">Task</span> <span class="variable">one</span> <span class="operator">=</span> queue.poll(<span class="number">100</span>, TimeUnit.MILLISECONDS);</span><br><span class="line">        <span class="keyword">if</span> (one != <span class="literal">null</span>) batch.add(one);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (!batch.isEmpty()) &#123;</span><br><span class="line">        processBatch(batch);</span><br><span class="line">        batch.clear();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p><code>drainTo</code> 一次加锁取多个元素，比循环 <code>poll()</code> 少 N 次锁操作，还能让下游做批量 IO（批量入库、批量发消息）。</p>
+<h3 id="4-4-优雅关闭：毒丸-超时"><a href="#4-4-优雅关闭：毒丸-超时" class="headerlink" title="4.4 优雅关闭：毒丸 + 超时"></a>4.4 优雅关闭：毒丸 + 超时</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">Task</span> <span class="variable">POISON</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Task</span>(<span class="string">&quot;POISON&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 关闭时给每个消费者投一颗毒丸</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">shutdownGracefully</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; consumerCount; i++) &#123;</span><br><span class="line">        queue.put(POISON);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">void</span> <span class="title function_">consumeLoop</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException &#123;</span><br><span class="line">    <span class="keyword">while</span> (<span class="literal">true</span>) &#123;</span><br><span class="line">        <span class="type">Task</span> <span class="variable">task</span> <span class="operator">=</span> queue.take();</span><br><span class="line">        <span class="keyword">if</span> (task == POISON) &#123;          <span class="comment">// 不能用 null 判断，BlockingQueue 禁止 null</span></span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        handle(task);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<table>
+<thead>
+<tr>
+<th>关闭方式</th>
+<th>效果</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>shutdown()</code></td>
+<td>不再接新任务，队列里的会跑完</td>
+<td>队列积压时会很久才结束</td>
+</tr>
+<tr>
+<td><code>shutdownNow()</code></td>
+<td>中断线程 + 返回未执行任务</td>
+<td>任务被丢弃/中断，需要自己处理返回值</td>
+</tr>
+<tr>
+<td>毒丸</td>
+<td>保证已入队任务被处理完</td>
+<td>要预留投毒丸的容量，别被满队列挡住</td>
+</tr>
+<tr>
+<td><code>offer(timeout)</code></td>
+<td>不会永久阻塞关闭流程</td>
+<td>关闭时可能丢新任务</td>
+</tr>
+</tbody></table>
+<p><code>shutdownNow()</code> 返回的 <code>List&lt;Runnable&gt;</code> 一定要接住并补偿，否则等于静默丢任务。</p>
+<h2 id="05-PriorityQueue：最小堆的四个坑"><a href="#05-PriorityQueue：最小堆的四个坑" class="headerlink" title="05 PriorityQueue：最小堆的四个坑"></a>05 PriorityQueue：最小堆的四个坑</h2><h3 id="5-1-基本用法"><a href="#5-1-基本用法" class="headerlink" title="5.1 基本用法"></a>5.1 基本用法</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line">PriorityQueue&lt;Integer&gt; pq = <span class="keyword">new</span> <span class="title class_">PriorityQueue</span>&lt;&gt;();        <span class="comment">// 默认最小堆</span></span><br><span class="line">pq.offer(<span class="number">5</span>); pq.offer(<span class="number">1</span>); pq.offer(<span class="number">3</span>);</span><br><span class="line">System.out.println(pq.peek());   <span class="comment">// 1</span></span><br><span class="line">System.out.println(pq.poll());   <span class="comment">// 1</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 自定义比较器：最大堆</span></span><br><span class="line">PriorityQueue&lt;Integer&gt; maxHeap = <span class="keyword">new</span> <span class="title class_">PriorityQueue</span>&lt;&gt;(Comparator.reverseOrder());</span><br><span class="line"></span><br><span class="line"><span class="comment">// 按任务优先级出队，同级按提交顺序（避免不稳定）</span></span><br><span class="line">PriorityQueue&lt;Order&gt; orders = <span class="keyword">new</span> <span class="title class_">PriorityQueue</span>&lt;&gt;(</span><br><span class="line">        Comparator.comparingInt(Order::getPriority)</span><br><span class="line">                  .thenComparingLong(Order::getSequence));</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="5-2-复杂度与坑"><a href="#5-2-复杂度与坑" class="headerlink" title="5.2 复杂度与坑"></a>5.2 复杂度与坑</h3><table>
+<thead>
+<tr>
+<th>操作</th>
+<th>复杂度</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>peek()</code></td>
+<td>O(1)</td>
+<td>堆顶</td>
+</tr>
+<tr>
+<td><code>offer()</code> / <code>poll()</code></td>
+<td>O(log n)</td>
+<td>上浮 / 下沉</td>
+</tr>
+<tr>
+<td><code>remove(Object)</code></td>
+<td><strong>O(n)</strong></td>
+<td>要先线性查找，别在热点路径用</td>
+</tr>
+<tr>
+<td>迭代器遍历</td>
+<td>不保证有序</td>
+<td>想要有序，循环 <code>poll()</code></td>
+</tr>
+<tr>
+<td><code>addAll(collection)</code></td>
+<td>O(n)</td>
+<td>比逐个 offer 快（一次性建堆）</td>
+</tr>
+</tbody></table>
+<p>四个高频坑：</p>
+<ol>
+<li><strong>迭代器不排序</strong>：<code>for (Integer x : pq)</code> 的顺序不是优先级顺序，面试常考。要有序就 <code>while (!pq.isEmpty()) pq.poll()</code>。</li>
+<li><strong>非线程安全</strong>：多线程用 <code>PriorityBlockingQueue</code>。</li>
+<li><strong>元素必须可比较</strong>：默认自然序要求实现 <code>Comparable</code>，否则 <code>ClassCastException</code>。</li>
+<li><strong>相同优先级不稳定</strong>：比较器没打破平局时出队顺序不确定，加序号字段兜底。</li>
+</ol>
+<h3 id="5-3-Top-K-问题"><a href="#5-3-Top-K-问题" class="headerlink" title="5.3 Top K 问题"></a>5.3 Top K 问题</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 求前 K 大：维护一个大小为 K 的最小堆</span></span><br><span class="line"><span class="keyword">public</span> List&lt;Integer&gt; <span class="title function_">topK</span><span class="params">(<span class="type">int</span>[] nums, <span class="type">int</span> k)</span> &#123;</span><br><span class="line">    PriorityQueue&lt;Integer&gt; minHeap = <span class="keyword">new</span> <span class="title class_">PriorityQueue</span>&lt;&gt;(k);</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> num : nums) &#123;</span><br><span class="line">        <span class="keyword">if</span> (minHeap.size() &lt; k) &#123;</span><br><span class="line">            minHeap.offer(num);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (num &gt; minHeap.peek()) &#123;</span><br><span class="line">            minHeap.poll();</span><br><span class="line">            minHeap.offer(num);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">ArrayList</span>&lt;&gt;(minHeap);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p>数据流场景（不断进来新元素取前 K 大）也用这个模式，<code>PriorityQueue</code> 是标准答案。</p>
+</blockquote>
+<h2 id="06-特殊队列怎么用"><a href="#06-特殊队列怎么用" class="headerlink" title="06 特殊队列怎么用"></a>06 特殊队列怎么用</h2><h3 id="6-1-SynchronousQueue：容量为-0-的”交接”"><a href="#6-1-SynchronousQueue：容量为-0-的”交接”" class="headerlink" title="6.1 SynchronousQueue：容量为 0 的”交接”"></a>6.1 SynchronousQueue：容量为 0 的”交接”</h3><ul>
+<li>没有内部存储：<code>put</code> 必须等到有线程 <code>take</code>，反之亦然；</li>
+<li><code>offer()</code> 在没有配对消费者时<strong>立即返回 false</strong>，不阻塞；</li>
+<li><code>fair</code> 模式（<code>new SynchronousQueue&lt;&gt;(true)</code>）按 FIFO 交接，默认非公平吞吐更高；</li>
+<li><code>CachedThreadPool</code> 用它：意味着”要么复用空闲线程，要么新建线程”，任务不会排队。</li>
+</ul>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line">SynchronousQueue&lt;String&gt; handoff = <span class="keyword">new</span> <span class="title class_">SynchronousQueue</span>&lt;&gt;();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 消费者没准备好时，这里直接 false，不会堆积</span></span><br><span class="line"><span class="type">boolean</span> <span class="variable">ok</span> <span class="operator">=</span> handoff.offer(<span class="string">&quot;data&quot;</span>, <span class="number">50</span>, TimeUnit.MILLISECONDS);</span><br></pre></td></tr></table></figure></div>
+
+<p>适合场景：线程间<strong>直接传递、不缓冲</strong>；不适合需要削峰的场合。</p>
+<h3 id="6-2-DelayQueue：延时到期才出队"><a href="#6-2-DelayQueue：延时到期才出队" class="headerlink" title="6.2 DelayQueue：延时到期才出队"></a>6.2 DelayQueue：延时到期才出队</h3><p>元素要实现 <code>Delayed</code>：</p>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">DelayedOrder</span> <span class="keyword">implements</span> <span class="title class_">Delayed</span> &#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="type">long</span> expireAtNanos;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="type">long</span> orderId;</span><br><span class="line"></span><br><span class="line">    DelayedOrder(<span class="type">long</span> orderId, <span class="type">long</span> delayMillis) &#123;</span><br><span class="line">        <span class="built_in">this</span>.orderId = orderId;</span><br><span class="line">        <span class="comment">// 用 nanoTime 做单调时钟，避免系统时间被回拨影响</span></span><br><span class="line">        <span class="built_in">this</span>.expireAtNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(delayMillis);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">long</span> <span class="title function_">getDelay</span><span class="params">(TimeUnit unit)</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> unit.convert(expireAtNanos - System.nanoTime(), TimeUnit.NANOSECONDS);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">compareTo</span><span class="params">(Delayed other)</span> &#123;</span><br><span class="line">        <span class="type">long</span> <span class="variable">diff</span> <span class="operator">=</span> getDelay(TimeUnit.NANOSECONDS) - other.getDelay(TimeUnit.NANOSECONDS);</span><br><span class="line">        <span class="keyword">return</span> Long.compare(diff, <span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">DelayQueue&lt;DelayedOrder&gt; delayQueue = <span class="keyword">new</span> <span class="title class_">DelayQueue</span>&lt;&gt;();</span><br><span class="line">delayQueue.put(<span class="keyword">new</span> <span class="title class_">DelayedOrder</span>(<span class="number">1001L</span>, <span class="number">15</span> * <span class="number">60</span> * <span class="number">1000</span>));   <span class="comment">// 15 分钟后超时</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 消费线程</span></span><br><span class="line"><span class="keyword">while</span> (running) &#123;</span><br><span class="line">    <span class="type">DelayedOrder</span> <span class="variable">order</span> <span class="operator">=</span> delayQueue.take();    <span class="comment">// 没到期就一直等</span></span><br><span class="line">    cancelIfNotPaid(order);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>特点与限制：</p>
+<table>
+<thead>
+<tr>
+<th>优点</th>
+<th>限制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>API 简单，<code>take()</code> 天然阻塞到到期</td>
+<td><strong>纯内存</strong>，进程重启任务全部丢失</td>
+</tr>
+<tr>
+<td>单个消费者即可，无需轮询</td>
+<td>无界，大量延时任务会占内存</td>
+</tr>
+<tr>
+<td>适合秒级~分钟级、允许丢失的场景</td>
+<td>多实例部署时无法共享，可能重复/漏处理</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>面试对比：<strong>“JVM 内 DelayQueue 适合轻量、可容忍丢失的延时任务；订单超时这种不能丢的，用延迟消息（RocketMQ 延迟等级 / Redis ZSet 轮询 / 时间轮 + 持久化）。”</strong> 海量定时任务（百万级）还应考虑<strong>时间轮</strong>（HashedWheelTimer），插入/删除 O(1)，而 DelayQueue 是 O(log n)。</p>
+</blockquote>
+<h3 id="6-3-LinkedTransferQueue：可等待的交接"><a href="#6-3-LinkedTransferQueue：可等待的交接" class="headerlink" title="6.3 LinkedTransferQueue：可等待的交接"></a>6.3 LinkedTransferQueue：可等待的交接</h3><ul>
+<li>兼具 <code>ConcurrentLinkedQueue</code> 的高吞吐和 <code>SynchronousQueue</code> 的交接语义；</li>
+<li><code>transfer(e)</code> 会阻塞直到<strong>被消费者取走</strong>（比普通 <code>put</code> 更强的确认）；</li>
+<li><code>tryTransfer(e)</code> 只在已有消费者等待时才成功；</li>
+<li><code>tryTransfer(e, timeout, unit)</code> 可加超时；</li>
+<li>无界，需要自己控流。</li>
+</ul>
+<p>适合”生产者希望确认任务已被处理线程接走”的场景。</p>
+<h3 id="6-4-ConcurrentLinkedQueue：无锁但不阻塞"><a href="#6-4-ConcurrentLinkedQueue：无锁但不阻塞" class="headerlink" title="6.4 ConcurrentLinkedQueue：无锁但不阻塞"></a>6.4 ConcurrentLinkedQueue：无锁但不阻塞</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line">ConcurrentLinkedQueue&lt;Event&gt; q = <span class="keyword">new</span> <span class="title class_">ConcurrentLinkedQueue</span>&lt;&gt;();</span><br><span class="line">q.offer(event);              <span class="comment">// 永不阻塞、永不失败（内存够的话）</span></span><br><span class="line"><span class="type">Event</span> <span class="variable">e</span> <span class="operator">=</span> q.poll();          <span class="comment">// 空时返回 null</span></span><br></pre></td></tr></table></figure></div>
+
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>无 <code>put/take</code></td>
+<td>它不是 <code>BlockingQueue</code>，只能 <code>poll</code> 或轮询</td>
+</tr>
+<tr>
+<td><code>size()</code> O(n)</td>
+<td>全链遍历，别在循环或判限流里调用</td>
+</tr>
+<tr>
+<td>迭代器弱一致</td>
+<td>不抛 <code>ConcurrentModificationException</code>，但可能看到部分修改</td>
+</tr>
+<tr>
+<td>无界</td>
+<td>生产快消费慢就是内存泄漏</td>
+</tr>
+<tr>
+<td>适合</td>
+<td>高并发投递 + 消费方可容忍空轮询，或作为多生产者收集器</td>
+</tr>
+</tbody></table>
+<p>如果用 <code>poll()</code> + <code>sleep</code> 轮询，CPU 会白白消耗；正确做法是配 <code>LockSupport.parkNanos</code>，或者直接用 <code>BlockingQueue</code>。</p>
+<h3 id="6-5-ArrayDeque：单线程首选"><a href="#6-5-ArrayDeque：单线程首选" class="headerlink" title="6.5 ArrayDeque：单线程首选"></a>6.5 ArrayDeque：单线程首选</h3><ul>
+<li>循环数组，头尾操作均摊 O(1)；</li>
+<li>比 <code>LinkedList</code> 缓存友好、内存连续、无逐节点对象开销；</li>
+<li>官方建议：<strong>当栈用比 <code>Stack</code> 快（<code>Stack</code> 继承自 <code>Vector</code>，全同步），当队列用比 <code>LinkedList</code> 快</strong>；</li>
+<li>非线程安全，禁止 <code>null</code>，迭代器 fail-fast。</li>
+</ul>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line">Deque&lt;String&gt; stack = <span class="keyword">new</span> <span class="title class_">ArrayDeque</span>&lt;&gt;();   <span class="comment">// 栈</span></span><br><span class="line">Deque&lt;String&gt; queue = <span class="keyword">new</span> <span class="title class_">ArrayDeque</span>&lt;&gt;();   <span class="comment">// 队列</span></span><br></pre></td></tr></table></figure></div>
+
+<h2 id="07-并发语义与一致性注意"><a href="#07-并发语义与一致性注意" class="headerlink" title="07 并发语义与一致性注意"></a>07 并发语义与一致性注意</h2><h3 id="7-1-fail-fast-还是弱一致"><a href="#7-1-fail-fast-还是弱一致" class="headerlink" title="7.1 fail-fast 还是弱一致"></a>7.1 fail-fast 还是弱一致</h3><table>
+<thead>
+<tr>
+<th>队列</th>
+<th>迭代器行为</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ArrayDeque</code> / <code>LinkedList</code> / <code>PriorityQueue</code></td>
+<td>fail-fast，可能抛 <code>ConcurrentModificationException</code></td>
+<td>多线程遍历时会炸</td>
+</tr>
+<tr>
+<td><code>BlockingQueue</code> 家族</td>
+<td>弱一致</td>
+<td>可能少看或多看，但不抛异常</td>
+</tr>
+<tr>
+<td><code>ConcurrentLinkedQueue</code></td>
+<td>弱一致</td>
+<td>同上</td>
+</tr>
+</tbody></table>
+<p>需要”从队列里捞一批出来处理”时，<strong>优先 <code>drainTo()</code> 而不是遍历再删除</strong>——<code>BlockingQueue.removeIf</code> / <code>removeAll</code> 是 O(n) 且会长时间持锁。</p>
+<h3 id="7-2-中断处理"><a href="#7-2-中断处理" class="headerlink" title="7.2 中断处理"></a>7.2 中断处理</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="type">Task</span> <span class="variable">task</span> <span class="operator">=</span> queue.take();</span><br><span class="line">&#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">    Thread.currentThread().interrupt();    <span class="comment">// 恢复中断标志</span></span><br><span class="line">    <span class="keyword">return</span>;                                 <span class="comment">// 干净退出，别继续吞任务</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li><code>put/take/offer(带超时)</code> 都会响应中断并抛 <code>InterruptedException</code>；</li>
+<li><strong>吞掉中断等于骗过所有想要停止你的代码</strong>，<code>Thread.interrupted()</code> 标志被清掉后，上层线程池无法关闭工作线程。</li>
+</ul>
+<h3 id="7-3-排队时长比队列长度更该监控"><a href="#7-3-排队时长比队列长度更该监控" class="headerlink" title="7.3 排队时长比队列长度更该监控"></a>7.3 排队时长比队列长度更该监控</h3><p>只监控 <code>size()</code> 不够，要监控<strong>队头元素的等待时间</strong>（P99 排队时长）。1000 个轻量任务和 50 个重任务的积压含义完全不同。</p>
+<p>建议指标：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>含义</th>
+<th>告警阈值思路</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>队列长度</td>
+<td>当前积压</td>
+<td>容量的 70%、90% 两级</td>
+</tr>
+<tr>
+<td>队头等待时长</td>
+<td>最老任务的排队时间</td>
+<td>按业务 SLA，如 &gt; 2s 告警</td>
+</tr>
+<tr>
+<td><code>offer</code> 超时次数</td>
+<td>满的次数</td>
+<td>持续增长即容量不足</td>
+</tr>
+<tr>
+<td><code>put</code> 阻塞线程数</td>
+<td>被背压的生产者数量</td>
+<td>突增说明消费者出问题</td>
+</tr>
+<tr>
+<td>拒绝/降级次数</td>
+<td>落库/丢弃的量</td>
+<td>必须为 0 或在预算内</td>
+</tr>
+<tr>
+<td>消费速率</td>
+<td>处理 TPS</td>
+<td>与生产速率对比</td>
+</tr>
+</tbody></table>
+<h3 id="7-4-内存与对象引用"><a href="#7-4-内存与对象引用" class="headerlink" title="7.4 内存与对象引用"></a>7.4 内存与对象引用</h3><ul>
+<li>队列里的对象在出队前不会被 GC，<strong>放 DTO 而不是大对象</strong>（字符串、图片 byte[] 会显著放大内存）；</li>
+<li><code>ArrayBlockingQueue</code> 数组容量固定，即使 poll 出元素，底层数组仍是那个大小（占内存稳定，好预估）；</li>
+<li><code>LinkedBlockingQueue</code> 每个元素一个 Node，节点对象额外开销约 24~32 字节，海量小元素时反而更占内存；</li>
+<li>出队后及时清理 <code>List</code> / <code>Map</code> 引用（尤其 <code>drainTo</code> 批处理用完要 <code>clear()</code>）。</li>
+</ul>
+<h3 id="7-5-公平性"><a href="#7-5-公平性" class="headerlink" title="7.5 公平性"></a>7.5 公平性</h3><ul>
+<li><code>ArrayBlockingQueue(100, true)</code> 可开启公平模式，FIFO 等待但吞吐下降明显；</li>
+<li>默认非公平，性能优先；</li>
+<li><code>SynchronousQueue(true)</code> 同理。生产默认非公平，除非出现明显饥饿。</li>
+</ul>
+<h2 id="08-选型速查"><a href="#08-选型速查" class="headerlink" title="08 选型速查"></a>08 选型速查</h2><table>
+<thead>
+<tr>
+<th>需求</th>
+<th>首选</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单线程做队列/栈</td>
+<td><code>ArrayDeque</code></td>
+<td>最快、内存连续、API 完整</td>
+</tr>
+<tr>
+<td>单线程优先级队列</td>
+<td><code>PriorityQueue</code></td>
+<td>堆，O(log n) 出最值</td>
+</tr>
+<tr>
+<td>线程池工作队列</td>
+<td><code>ArrayBlockingQueue</code>（或指定容量的 <code>LinkedBlockingQueue</code>）</td>
+<td>有界才能触发拒绝策略</td>
+</tr>
+<tr>
+<td>高吞吐生产者消费者</td>
+<td><code>LinkedBlockingQueue</code>（给容量）</td>
+<td>读写双锁，put/take 竞争小</td>
+</tr>
+<tr>
+<td>内存可控、容量固定</td>
+<td><code>ArrayBlockingQueue</code></td>
+<td>预分配数组、单锁简单</td>
+</tr>
+<tr>
+<td>线程间直接交接不缓冲</td>
+<td><code>SynchronousQueue</code> / <code>LinkedTransferQueue</code></td>
+<td>容量 0 / 可等待被取走</td>
+</tr>
+<tr>
+<td>延时到期执行</td>
+<td><code>DelayQueue</code>（可丢）/ MQ 延迟消息（不可丢）</td>
+<td>内存 vs 可靠性</td>
+</tr>
+<tr>
+<td>优先级 + 多线程</td>
+<td><code>PriorityBlockingQueue</code></td>
+<td>线程安全的堆</td>
+</tr>
+<tr>
+<td>高并发非阻塞投递</td>
+<td><code>ConcurrentLinkedQueue</code></td>
+<td>CAS 无锁，吞吐最高</td>
+</tr>
+<tr>
+<td>双端 + 工作窃取</td>
+<td><code>LinkedBlockingDeque</code> / <code>ForkJoinPool</code> 队列</td>
+<td>两端阻塞、可窃取</td>
+</tr>
+<tr>
+<td>跨进程、可回放、削峰</td>
+<td>Kafka / RocketMQ</td>
+<td>JVM 队列不解决可靠性与分布式</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>一句总结：<strong>“JVM 内队列解决解耦和背压，MQ 解决可靠、广播与跨进程。别用内存队列假装消息中间件。”</strong></p>
+</blockquote>
+<h2 id="09-面试高频问答"><a href="#09-面试高频问答" class="headerlink" title="09 面试高频问答"></a>09 面试高频问答</h2><p><strong>Q1：<code>add</code> 和 <code>offer</code> 到底用哪个？</strong><br>A：语义区别只在”满了怎么办”——<code>add</code> 抛异常，<code>offer</code> 返回 false。生产上更推荐 <code>offer(e, timeout, unit)</code>，既能背压又不会让调用线程永久挂死，失败后走降级（落库/转 MQ/丢弃打点）。</p>
+<p><strong>Q2：<code>put</code> 和 <code>offer</code> 呢？</strong><br>A：<code>put</code> 阻塞直到成功，适合”绝不丢数据且消费者健康”的场景，但有消费者挂掉导致生产者堆积卡死的风险；<code>offer</code> 立即返回结果，适合可容忍丢弃或需要自己做重试的场景。</p>
+<p><strong>Q3：ArrayBlockingQueue 和 LinkedBlockingQueue 的区别？</strong><br>A：三点——① 有界性：前者构造必须指定容量，后者默认 <code>Integer.MAX_VALUE</code>（无界隐患）；② 锁：前者一把锁（put/take 互斥，可选公平），后者两把锁（put/take 可并行，吞吐更高）；③ 内存：前者预分配数组，内存可控；后者每元素一个节点对象，容易积压占内存。</p>
+<p><strong>Q4：为什么不建议用 <code>Executors</code> 创建线程池？</strong><br>A：<code>newFixedThreadPool</code> / <code>newSingleThreadExecutor</code> 用无界 <code>LinkedBlockingQueue</code>，任务积压直接 OOM；<code>newCachedThreadPool</code> 最大线程数是 <code>Integer.MAX_VALUE</code>，峰值会创建海量线程。生产用 <code>ThreadPoolExecutor</code> 手动指定有界队列、线程名和拒绝策略。</p>
+<p><strong>Q5：BlockingQueue 为什么不能存 null？</strong><br>A：<code>poll()</code> / <code>take()</code> 用 null 表示”空或超时”，如果允许存 null 就产生歧义。所以毒丸机制要用专门的哨兵对象，而不是 null。</p>
+<p><strong>Q6：PriorityQueue 的迭代器为什么不是有序的？</strong><br>A：它底层是数组堆，只保证父节点不大于子节点，层序遍历不是排序结果。要有序就反复 <code>poll()</code>。另外 <code>remove(Object)</code> 是 O(n)，热点路径避免使用。</p>
+<p><strong>Q7：DelayQueue 适合做订单超时吗？</strong><br>A：单机、量小、允许重启丢任务的话可以；但订单超时通常不能丢，应该用延迟消息或 Redis ZSet + 轮询，或多实例共享。海量延时（百万级）用时间轮，插入/删除 O(1)，比堆的 O(log n) 更适合。</p>
+<p><strong>Q8：多线程遍历队列会发生什么？</strong><br>A：<code>ArrayDeque</code>、<code>PriorityQueue</code> 是 fail-fast，会抛 <code>ConcurrentModificationException</code>；<code>BlockingQueue</code>、<code>ConcurrentLinkedQueue</code> 是弱一致迭代器，不抛异常但视图可能不完整。要处理一批元素就用 <code>drainTo</code>。</p>
+<p><strong>Q9：消费者线程怎么优雅停止？</strong><br>A：毒丸（每个消费者一颗）或 <code>volatile running</code> 标志 + <code>poll(timeout)</code> 循环 + <code>shutdown()</code> 后等待队列排空；<code>shutdownNow()</code> 返回的未执行任务列表必须补偿处理。</p>
+<p><strong>Q10：怎么发现队列出了问题？</strong><br>A：看四个指标——队列长度、队头等待时长、<code>offer</code> 超时/拒绝次数、被 <code>put</code> 阻塞的线程数。队头等待时长比长度更能反映真实积压。</p>
+<h2 id="10-避坑清单（生产-12-条）"><a href="#10-避坑清单（生产-12-条）" class="headerlink" title="10 避坑清单（生产 12 条）"></a>10 避坑清单（生产 12 条）</h2><ol>
+<li><strong>永远显式指定队列容量</strong>，不要用无界队列”先跑起来再说”。</li>
+<li><strong>消费者循环内 catch 单任务异常</strong>，一个任务失败不能让线程退出。</li>
+<li><strong>别用 <code>isEmpty()</code> + <code>poll()</code> 判空取数</strong>，直接用 <code>poll()</code> 返回值。</li>
+<li><strong>生产入口带超时</strong>：<code>offer(e, timeout, unit)</code>，失败有明确降级路径。</li>
+<li><strong>中断要恢复标志</strong>：<code>catch (InterruptedException e) { Thread.currentThread().interrupt(); }</code>。</li>
+<li><strong>毒丸不用 null</strong>，用独立哨兵对象，且关闭时确保容量够投毒丸。</li>
+<li><strong>别在 <code>BlockingQueue</code> 上遍历删除</strong>，用 <code>drainTo</code> 批量取。</li>
+<li><strong>别用 <code>ConcurrentLinkedQueue.size()</code> 做限流</strong>，O(n) 且并发下不准。</li>
+<li><strong>PriorityQueue 非线程安全</strong>，并发场景换 <code>PriorityBlockingQueue</code>。</li>
+<li><strong>DelayQueue 是内存态</strong>，重启即丢，不能当可靠延时方案。</li>
+<li><strong>队列元素尽量放 ID/轻量 DTO</strong>，别放大字符串、集合、byte[]。</li>
+<li><strong>监控排队时长而不是只看长度</strong>，并在容量使用率 70% 时告警。</li>
+</ol>
+<h2 id="一页纸速查"><a href="#一页纸速查" class="headerlink" title="一页纸速查"></a>一页纸速查</h2><table>
+<thead>
+<tr>
+<th>关键词</th>
+<th>一句话</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>add / offer / put</td>
+<td>满了：抛异常 / 返回 false / 阻塞</td>
+</tr>
+<tr>
+<td>remove / poll / take</td>
+<td>空了：抛异常 / 返回 null / 阻塞</td>
+</tr>
+<tr>
+<td>element / peek</td>
+<td>只看队头：抛异常 / 返回 null</td>
+</tr>
+<tr>
+<td>ArrayDeque</td>
+<td>单线程队列与栈首选，禁 null，非线程安全</td>
+</tr>
+<tr>
+<td>PriorityQueue</td>
+<td>默认最小堆，迭代器不排序，<code>remove</code> O(n)</td>
+</tr>
+<tr>
+<td>ArrayBlockingQueue</td>
+<td>有界、单锁、预分配，线程池推荐</td>
+</tr>
+<tr>
+<td>LinkedBlockingQueue</td>
+<td>双锁吞吐高，但默认无界要自己设容量</td>
+</tr>
+<tr>
+<td>SynchronousQueue</td>
+<td>容量 0，交接；CachedThreadPool 用它</td>
+</tr>
+<tr>
+<td>DelayQueue</td>
+<td><code>Delayed</code> + <code>take()</code> 到期才返回，内存态</td>
+</tr>
+<tr>
+<td>ConcurrentLinkedQueue</td>
+<td>无锁非阻塞，<code>size()</code> O(n)，弱一致</td>
+</tr>
+<tr>
+<td>drainTo</td>
+<td>批量取，减少锁操作，适合批处理</td>
+</tr>
+<tr>
+<td>毒丸</td>
+<td>优雅关闭，不能用 null 做哨兵</td>
+</tr>
+<tr>
+<td>弱一致迭代器</td>
+<td>不抛 CME，但视图可能不完整</td>
+</tr>
+<tr>
+<td>容量公式</td>
+<td>峰值速率 × 可接受排队时间</td>
+</tr>
+</tbody></table>
+<p><strong>最后记住三句话：</strong></p>
+<ol>
+<li><strong>方法层面</strong>：先想清楚”满了怎么办、空了怎么办”，再决定用 <code>add/offer/put</code> 还是 <code>remove/poll/take</code>。</li>
+<li><strong>选型层面</strong>：单线程用 <code>ArrayDeque</code>，线程池用有界 <code>BlockingQueue</code>，优先级用堆，延时分清”可丢/不可丢”，高并发投递才用无锁队列。</li>
+<li><strong>运维层面</strong>：容量必须有界、拒绝必须有策略、排队时长必须有监控、消费者异常必须被捕获——这四条做到，队列基本不会出事。</li>
+</ol>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day19：Java队列全景：常用方法、选型与避坑</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-10-22 17:30:50</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-10-22 17:30:50
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/10/22/复习知识点Day19-Java队列全景：常用方法、选型与避坑/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
+</div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Java/">#Java</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%9D%A2%E8%AF%95/">#面试</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">#复习知识点</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%B9%B6%E5%8F%91/">#并发</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%98%9F%E5%88%97/">#队列</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/BlockingQueue/">#BlockingQueue</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%9B%86%E5%90%88/">#集合</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/10/21/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day18-%E5%86%B7%E7%83%AD%E6%8E%A5%E5%8F%A3%E5%88%86%E7%A6%BB%E3%80%81%E7%83%AD%E7%82%B9Key%E6%B2%BB%E7%90%86%E4%B8%8E%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8%E8%90%BD%E5%9C%B0%E6%96%B9%E6%A1%88/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day18：冷热接口分离、热点Key治理与分库分表落地方案</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
+	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day19：Java队列全景：常用方法、选型与避坑</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%88%E8%AF%B4%E7%BB%93%E8%AE%BA"><span class="nav-text">先说结论</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#01-%E9%98%9F%E5%88%97%E5%AE%B6%E6%97%8F%E5%9B%BE%E8%B0%B1"><span class="nav-text">01 队列家族图谱</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E7%BB%A7%E6%89%BF%E5%85%B3%E7%B3%BB"><span class="nav-text">1.1 继承关系</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E5%B8%B8%E7%94%A8%E9%98%9F%E5%88%97%E9%80%9F%E6%9F%A5%E8%A1%A8"><span class="nav-text">1.2 常用队列速查表</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#02-%E4%B8%89%E5%A5%97%E6%A0%B8%E5%BF%83%E6%96%B9%E6%B3%95%EF%BC%9A%E6%BB%A1%E4%BA%86%E6%80%8E%E4%B9%88%E5%8A%9E%E3%80%81%E7%A9%BA%E4%BA%86%E6%80%8E%E4%B9%88%E5%8A%9E"><span class="nav-text">02 三套核心方法：满了怎么办、空了怎么办</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E6%8F%92%E5%85%A5%EF%BC%9Aadd-offer-put"><span class="nav-text">2.1 插入：add &#x2F; offer &#x2F; put</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%8F%96%E5%87%BA%EF%BC%9Aremove-poll-take"><span class="nav-text">2.2 取出：remove &#x2F; poll &#x2F; take</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%9F%A5%E7%9C%8B%EF%BC%9Aelement-peek"><span class="nav-text">2.3 查看：element &#x2F; peek</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-Deque-%E7%9A%84%E5%8F%8C%E7%AB%AF%E6%96%B9%E6%B3%95%EF%BC%88ArrayDeque-%E4%B8%93%E7%94%A8%EF%BC%89"><span class="nav-text">2.4 Deque 的双端方法（ArrayDeque 专用）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-%E4%B8%BA%E4%BB%80%E4%B9%88-BlockingQueue-%E4%B8%8D%E5%85%81%E8%AE%B8-null"><span class="nav-text">2.5 为什么 BlockingQueue 不允许 null</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#03-%E6%9C%89%E7%95%8C%E3%80%81%E8%83%8C%E5%8E%8B%E4%B8%8E%E5%AE%B9%E9%87%8F%E8%A7%84%E5%88%92"><span class="nav-text">03 有界、背压与容量规划</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E6%97%A0%E7%95%8C%E9%98%9F%E5%88%97%E7%9A%84%E7%9C%9F%E5%AE%9E%E5%90%8E%E6%9E%9C"><span class="nav-text">3.1 无界队列的真实后果</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%AE%B9%E9%87%8F%E6%80%8E%E4%B9%88%E5%AE%9A%EF%BC%9A%E7%94%A8%E6%8E%92%E9%98%9F%E6%97%B6%E9%95%BF%E5%8F%8D%E6%8E%A8"><span class="nav-text">3.2 容量怎么定：用排队时长反推</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E9%98%9F%E5%88%97%E6%BB%A1%E4%BA%86%E4%BB%A5%E5%90%8E%E6%80%8E%E4%B9%88%E5%8A%9E%EF%BC%88%E6%AF%94%E8%AE%BE%E5%AE%B9%E9%87%8F%E6%9B%B4%E9%87%8D%E8%A6%81%EF%BC%89"><span class="nav-text">3.3 队列满了以后怎么办（比设容量更重要）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#04-%E7%94%9F%E4%BA%A7%E8%80%85-%E6%B6%88%E8%B4%B9%E8%80%85%EF%BC%9A%E5%9B%9B%E7%A7%8D%E5%86%99%E6%B3%95"><span class="nav-text">04 生产者-消费者：四种写法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-wait-notify-%E6%89%8B%E5%86%99%EF%BC%88%E7%90%86%E8%A7%A3%E5%8E%9F%E7%90%86%EF%BC%89"><span class="nav-text">4.1 wait &#x2F; notify 手写（理解原理）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-BlockingQueue%EF%BC%88%E6%A0%87%E5%87%86%E5%86%99%E6%B3%95%EF%BC%89"><span class="nav-text">4.2 BlockingQueue（标准写法）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E6%89%B9%E9%87%8F%E5%8F%96%E5%87%BA%E9%99%8D%E4%BD%8E%E9%94%81%E7%AB%9E%E4%BA%89%EF%BC%9AdrainTo"><span class="nav-text">4.3 批量取出降低锁竞争：drainTo</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E4%BC%98%E9%9B%85%E5%85%B3%E9%97%AD%EF%BC%9A%E6%AF%92%E4%B8%B8-%E8%B6%85%E6%97%B6"><span class="nav-text">4.4 优雅关闭：毒丸 + 超时</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#05-PriorityQueue%EF%BC%9A%E6%9C%80%E5%B0%8F%E5%A0%86%E7%9A%84%E5%9B%9B%E4%B8%AA%E5%9D%91"><span class="nav-text">05 PriorityQueue：最小堆的四个坑</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E5%9F%BA%E6%9C%AC%E7%94%A8%E6%B3%95"><span class="nav-text">5.1 基本用法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E5%A4%8D%E6%9D%82%E5%BA%A6%E4%B8%8E%E5%9D%91"><span class="nav-text">5.2 复杂度与坑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-Top-K-%E9%97%AE%E9%A2%98"><span class="nav-text">5.3 Top K 问题</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#06-%E7%89%B9%E6%AE%8A%E9%98%9F%E5%88%97%E6%80%8E%E4%B9%88%E7%94%A8"><span class="nav-text">06 特殊队列怎么用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-SynchronousQueue%EF%BC%9A%E5%AE%B9%E9%87%8F%E4%B8%BA-0-%E7%9A%84%E2%80%9D%E4%BA%A4%E6%8E%A5%E2%80%9D"><span class="nav-text">6.1 SynchronousQueue：容量为 0 的”交接”</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-DelayQueue%EF%BC%9A%E5%BB%B6%E6%97%B6%E5%88%B0%E6%9C%9F%E6%89%8D%E5%87%BA%E9%98%9F"><span class="nav-text">6.2 DelayQueue：延时到期才出队</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-LinkedTransferQueue%EF%BC%9A%E5%8F%AF%E7%AD%89%E5%BE%85%E7%9A%84%E4%BA%A4%E6%8E%A5"><span class="nav-text">6.3 LinkedTransferQueue：可等待的交接</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-ConcurrentLinkedQueue%EF%BC%9A%E6%97%A0%E9%94%81%E4%BD%86%E4%B8%8D%E9%98%BB%E5%A1%9E"><span class="nav-text">6.4 ConcurrentLinkedQueue：无锁但不阻塞</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-5-ArrayDeque%EF%BC%9A%E5%8D%95%E7%BA%BF%E7%A8%8B%E9%A6%96%E9%80%89"><span class="nav-text">6.5 ArrayDeque：单线程首选</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#07-%E5%B9%B6%E5%8F%91%E8%AF%AD%E4%B9%89%E4%B8%8E%E4%B8%80%E8%87%B4%E6%80%A7%E6%B3%A8%E6%84%8F"><span class="nav-text">07 并发语义与一致性注意</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-fail-fast-%E8%BF%98%E6%98%AF%E5%BC%B1%E4%B8%80%E8%87%B4"><span class="nav-text">7.1 fail-fast 还是弱一致</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E4%B8%AD%E6%96%AD%E5%A4%84%E7%90%86"><span class="nav-text">7.2 中断处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E6%8E%92%E9%98%9F%E6%97%B6%E9%95%BF%E6%AF%94%E9%98%9F%E5%88%97%E9%95%BF%E5%BA%A6%E6%9B%B4%E8%AF%A5%E7%9B%91%E6%8E%A7"><span class="nav-text">7.3 排队时长比队列长度更该监控</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-%E5%86%85%E5%AD%98%E4%B8%8E%E5%AF%B9%E8%B1%A1%E5%BC%95%E7%94%A8"><span class="nav-text">7.4 内存与对象引用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-5-%E5%85%AC%E5%B9%B3%E6%80%A7"><span class="nav-text">7.5 公平性</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#08-%E9%80%89%E5%9E%8B%E9%80%9F%E6%9F%A5"><span class="nav-text">08 选型速查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#09-%E9%9D%A2%E8%AF%95%E9%AB%98%E9%A2%91%E9%97%AE%E7%AD%94"><span class="nav-text">09 面试高频问答</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E9%81%BF%E5%9D%91%E6%B8%85%E5%8D%95%EF%BC%88%E7%94%9F%E4%BA%A7-12-%E6%9D%A1%EF%BC%89"><span class="nav-text">10 避坑清单（生产 12 条）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E9%A1%B5%E7%BA%B8%E9%80%9F%E6%9F%A5"><span class="nav-text">一页纸速查</span></a></li></ol>
+
+	</div>
+</div>
+	</div>
+	
+</div>
+
+			</div>
+
+			
+		</div>
+
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2017</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">Percy jie</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 31 篇文章
+                    </span>
+                    
+                        <span>
+                            共 97.6k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
+
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
+	
+
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>

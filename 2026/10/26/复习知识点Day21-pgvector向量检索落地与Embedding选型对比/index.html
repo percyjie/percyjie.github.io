@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="AI, Java, Security, Blog">
+    
+    
+    <meta name="author" content="Percy jie">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://percyjie.github.io/2026/10/26/复习知识点day21-pgvector向量检索落地与embedding选型对比/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day21：pgvector向量检索落地与Embedding选型对比">
+<meta property="og:url" content="https://percyjie.github.io/2026/10/26/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day21-pgvector%E5%90%91%E9%87%8F%E6%A3%80%E7%B4%A2%E8%90%BD%E5%9C%B0%E4%B8%8EEmbedding%E9%80%89%E5%9E%8B%E5%AF%B9%E6%AF%94/index.html">
+<meta property="og:site_name" content="Percy&#39;s Note">
+<meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-10-26T09:33:27.000Z">
+<meta property="article:modified_time" content="2026-10-26T09:33:27.000Z">
+<meta property="article:author" content="Percy jie">
+<meta property="article:tag" content="Embedding">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="RAG">
+<meta property="article:tag" content="pgvector">
+<meta property="article:tag" content="向量检索">
+<meta property="article:tag" content="复习知识点">
+<meta property="article:tag" content="面试">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            复习知识点Day21：pgvector向量检索落地与Embedding选型对比 | Percy&#39;s Note
+        
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"percyjie.github.io","root":"/","language":"zh-CN"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"vs2015"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/redefine-og.webp","description":"人没有梦想，和咸鱼有什么分别"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Percy's Note","subtitle":{"text":["人没有梦想，和咸鱼有什么分别"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"default","links":[{"icon":"fa-brands fa-github","url":"https://github.com/percyjie"},{"icon":"fa-brands fa-weibo","url":"https://weibo.com/panjie0709"},{"icon":null,"url":null},{"icon":null,"url":null},{"icon":null,"url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"cloud","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":{"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"}}},"article_date_format":"auto","excerpt_length":200,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart fa-beat\" style=\"--fa-animation-duration: 0.5s; color: #f54545\"></i>","start":"2017/03/08 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2017/03/08 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                Percy&#39;s Note
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/tags"
+                                        >
+                                    <i class="fa-regular fa-tags fa-fw"></i>
+                                    标签
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/tags"
+                        >
+                            <span>
+                                标签
+                            </span>
+                            
+                                <i class="fa-regular fa-tags fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">109</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">12</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">33</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+
+			<div class="main-content">
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
+
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day21：pgvector向量检索落地与Embedding选型对比</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv4</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-10-26 17:33:27</span>
+        <span class="mobile">2026-10-26 17:33:27</span>
+        <span class="hover-info">创建</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-10-26 17:33:27</span>
+            <span class="mobile">2026-10-26 17:33:27</span>
+            <span class="hover-info">更新</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/AI-%E5%B7%A5%E7%A8%8B/">AI 工程</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/RAG/">RAG</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">复习知识点</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/PostgreSQL/">PostgreSQL</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/pgvector/">pgvector</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Embedding/">Embedding</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%90%91%E9%87%8F%E6%A3%80%E7%B4%A2/">向量检索</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>7.1k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>26 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天：<strong>pgvector 的价值不是”能算向量距离”，而是”让向量检索长在业务数据库里”——事务、权限、过滤、备份、JOIN 全部复用</strong>；而 <strong>Embedding 选型的本质是”语义粒度 × 成本 × 部署约束”的三角取舍</strong>。面试抓四块：① 索引类型（精确扫描 / IVFFlat / HNSW）怎么选、参数怎么调；② 带过滤的检索和混合检索怎么做；③ Embedding 怎么评、换模型怎么迁移；④ 什么时候必须换专用向量库。</p>
+</blockquote>
+<h2 id="先说结论：三张表先看全貌"><a href="#先说结论：三张表先看全貌" class="headerlink" title="先说结论：三张表先看全貌"></a>先说结论：三张表先看全貌</h2><p><strong>检索方式怎么选：</strong></p>
+<table>
+<thead>
+<tr>
+<th>数据量 / 需求</th>
+<th>首选</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>小于 10 万条，或在做效果基线</td>
+<td>精确扫描（不建向量索引）</td>
+<td>召回 100%，够用且最省心</td>
+</tr>
+<tr>
+<td>百万级、内存敏感、写入频繁</td>
+<td><code>IVFFlat</code></td>
+<td>索引小、构建快，靠 <code>probes</code> 换召回</td>
+</tr>
+<tr>
+<td>在线检索、要求低延迟高召回</td>
+<td><code>HNSW</code></td>
+<td>查询最快，代价是构建慢、占内存</td>
+</tr>
+<tr>
+<td>千万~亿级仍在 PostgreSQL 体系内</td>
+<td><code>HNSW</code> + <code>halfvec</code>/二值量化，或 <code>pgvectorscale</code></td>
+<td>压内存、提规模</td>
+</tr>
+</tbody></table>
+<p><strong>Embedding 怎么选：</strong></p>
+<table>
+<thead>
+<tr>
+<th>约束</th>
+<th>推荐路线</th>
+<th>注意</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>快速上线、中文为主、不想自运维</td>
+<td>闭源 API 通用向量模型</td>
+<td>数据出境与供应商锁定</td>
+</tr>
+<tr>
+<td>私有化 / 合规 / 离线</td>
+<td>开源模型自建推理服务</td>
+<td>要算 GPU 与吞吐账</td>
+</tr>
+<tr>
+<td>代码检索</td>
+<td>代码专用 embedding</td>
+<td>通用模型对标识符召回差</td>
+</tr>
+<tr>
+<td>需要强关键词命中（术语、型号）</td>
+<td>稠密 + 稀疏混合检索</td>
+<td>纯向量对精确匹配不友好</td>
+</tr>
+</tbody></table>
+<p><strong>要不要专用向量库：</strong></p>
+<table>
+<thead>
+<tr>
+<th>信号</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数据已在 PG、权限和事务要求高、千万级以内</td>
+<td>用 pgvector，别过度设计</td>
+</tr>
+<tr>
+<td>亿级向量、需要 GPU 建索引、过滤条件极复杂、极致延迟</td>
+<td>上专用向量库</td>
+</tr>
+<tr>
+<td>已有 ES 且关键词权重高</td>
+<td>先用 ES kNN 做混合，别三套系统并存</td>
+</tr>
+</tbody></table>
+<h2 id="01-pgvector-是什么：把向量放进-PostgreSQL"><a href="#01-pgvector-是什么：把向量放进-PostgreSQL" class="headerlink" title="01 pgvector 是什么：把向量放进 PostgreSQL"></a>01 pgvector 是什么：把向量放进 PostgreSQL</h2><h3 id="1-1-类型与距离算子"><a href="#1-1-类型与距离算子" class="headerlink" title="1.1 类型与距离算子"></a>1.1 类型与距离算子</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>精度</th>
+<th>用途</th>
+<th>可索引维度量级</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>vector</code></td>
+<td>float32</td>
+<td>通用稠密向量</td>
+<td>约 2000 维以内建索引</td>
+</tr>
+<tr>
+<td><code>halfvec</code></td>
+<td>float16</td>
+<td>高维向量、省内存、降 TOAST</td>
+<td>约 4000 维</td>
+</tr>
+<tr>
+<td><code>bit</code></td>
+<td>每维 1 bit</td>
+<td>二值量化，先粗召回再重排</td>
+<td>上限远高于 vector</td>
+</tr>
+<tr>
+<td><code>sparsevec</code></td>
+<td>稀疏 float</td>
+<td>SPLADE/BGE-M3 稀疏向量</td>
+<td>受非零元素数限制</td>
+</tr>
+</tbody></table>
+<p>三个<strong>可以建索引</strong>的核心距离算子：</p>
+<table>
+<thead>
+<tr>
+<th>算子</th>
+<th>含义</th>
+<th>索引 opclass</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>&lt;-&gt;</code></td>
+<td>L2 欧氏距离</td>
+<td><code>vector_l2_ops</code></td>
+</tr>
+<tr>
+<td><code>&lt;=&gt;</code></td>
+<td>余弦距离（1 − cosθ）</td>
+<td><code>vector_cosine_ops</code></td>
+</tr>
+<tr>
+<td><code>&lt;#&gt;</code></td>
+<td>负内积</td>
+<td><code>vector_ip_ops</code></td>
+</tr>
+</tbody></table>
+<p>新版本还补充了 L1、切比雪夫、Hamming、Jaccard 等距离（部分只能精确计算、不能建索引）；<code>bit</code> 类型常用 Hamming / Jaccard。<strong>pgvector 演进很快，维度上限和参数名以所用版本的官方 README 为准，面试答方法论即可。</strong></p>
+<h3 id="1-2-最小可用链路"><a href="#1-2-最小可用链路" class="headerlink" title="1.2 最小可用链路"></a>1.2 最小可用链路</h3><div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> EXTENSION IF <span class="keyword">NOT</span> <span class="keyword">EXISTS</span> vector;</span><br><span class="line"></span><br><span class="line"><span class="keyword">CREATE TABLE</span> chunk (</span><br><span class="line">  id          BIGSERIAL <span class="keyword">PRIMARY KEY</span>,</span><br><span class="line">  doc_id      <span class="type">BIGINT</span> <span class="keyword">NOT NULL</span>,</span><br><span class="line">  tenant_id   <span class="type">INT</span>    <span class="keyword">NOT NULL</span>,</span><br><span class="line">  content     TEXT   <span class="keyword">NOT NULL</span>,</span><br><span class="line">  meta        JSONB,</span><br><span class="line">  embedding   vector(<span class="number">1024</span>) <span class="keyword">NOT NULL</span>,     <span class="comment">-- 维度必须与模型输出一致</span></span><br><span class="line">  tsv         tsvector</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 近邻索引（余弦距离）</span></span><br><span class="line"><span class="keyword">CREATE</span> INDEX chunk_emb_idx <span class="keyword">ON</span> chunk</span><br><span class="line">  <span class="keyword">USING</span> hnsw (embedding vector_cosine_ops)</span><br><span class="line">  <span class="keyword">WITH</span> (m <span class="operator">=</span> <span class="number">16</span>, ef_construction <span class="operator">=</span> <span class="number">64</span>);</span><br></pre></td></tr></table></figure></div>
+
+<div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SET</span> hnsw.ef_search <span class="operator">=</span> <span class="number">100</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span> id, content,</span><br><span class="line">       <span class="number">1</span> <span class="operator">-</span> (embedding <span class="operator">&lt;=&gt;</span> :qvec) <span class="keyword">AS</span> score     <span class="comment">-- 相似度：越接近 1 越相关</span></span><br><span class="line"><span class="keyword">FROM</span> chunk</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> embedding <span class="operator">&lt;=&gt;</span> :qvec                  <span class="comment">-- 必须和索引 opclass 一致</span></span><br><span class="line">LIMIT <span class="number">8</span>;</span><br></pre></td></tr></table></figure></div>
+
+<p>两个必记细节：</p>
+<ol>
+<li><strong><code>ORDER BY 距离算子 ... LIMIT k</code> 才会走近似索引</strong>，把距离写在 <code>WHERE</code> 里当过滤条件是另一回事；</li>
+<li><strong>查询用的距离必须和索引 opclass 匹配</strong>，用 cosine 建的索引却按 L2 排序，会退化成全表扫描。</li>
+</ol>
+<h3 id="1-3-为什么很多团队最终留在-pgvector"><a href="#1-3-为什么很多团队最终留在-pgvector" class="headerlink" title="1.3 为什么很多团队最终留在 pgvector"></a>1.3 为什么很多团队最终留在 pgvector</h3><table>
+<thead>
+<tr>
+<th>优势</th>
+<th>具体含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>事务一致</td>
+<td>文档、向量、元数据同一事务写入，不存在”库里有向量但正文已删”</td>
+</tr>
+<tr>
+<td>权限复用</td>
+<td>RLS、角色、行级过滤直接生效，不用在向量库里再造一套 ACL</td>
+</tr>
+<tr>
+<td>关系能力</td>
+<td>检索结果直接 JOIN 业务表（订单、工单、用户），无需 ID 回查</td>
+</tr>
+<tr>
+<td>运维复用</td>
+<td>备份、PITR、监控、慢查询工具链全都是现成的</td>
+</tr>
+<tr>
+<td>成本低</td>
+<td>不新增一个需要高可用的服务</td>
+</tr>
+<tr>
+<td>混合检索</td>
+<td>同一份数据上做 <code>tsvector</code> + 向量融合，RRF 一条 SQL 搞定</td>
+</tr>
+</tbody></table>
+<p>代价也很清楚：<strong>单机规模上限、过滤检索弱、没有分布式与 GPU 索引、大表 DDL 和索引构建很重。</strong> 面试能把这”五优五缺”讲全，就是及格线以上。</p>
+<h2 id="02-索引选型：精确、IVFFlat、HNSW"><a href="#02-索引选型：精确、IVFFlat、HNSW" class="headerlink" title="02 索引选型：精确、IVFFlat、HNSW"></a>02 索引选型：精确、IVFFlat、HNSW</h2><h3 id="2-1-三种检索方式对比"><a href="#2-1-三种检索方式对比" class="headerlink" title="2.1 三种检索方式对比"></a>2.1 三种检索方式对比</h3><table>
+<thead>
+<tr>
+<th>方式</th>
+<th>原理</th>
+<th>召回</th>
+<th>延迟</th>
+<th>内存/构建</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>精确扫描</td>
+<td>每条向量都算距离再排序</td>
+<td>100%</td>
+<td>随数据量线性增长</td>
+<td>无需索引</td>
+<td>小数据集、评测基线、强一致场景</td>
+</tr>
+<tr>
+<td>IVFFlat</td>
+<td>先聚类分桶，查询只搜最近的若干桶</td>
+<td>取决于 <code>probes</code></td>
+<td>较低</td>
+<td>索引小、构建快</td>
+<td>数据量大、内存有限、写入多</td>
+</tr>
+<tr>
+<td>HNSW</td>
+<td>多层图导航，逐层逼近目标</td>
+<td>高</td>
+<td><strong>最低</strong></td>
+<td>索引大、构建慢</td>
+<td>在线检索主流选择</td>
+</tr>
+</tbody></table>
+<h3 id="2-2-HNSW：参数与坑"><a href="#2-2-HNSW：参数与坑" class="headerlink" title="2.2 HNSW：参数与坑"></a>2.2 HNSW：参数与坑</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>作用</th>
+<th>调大的代价</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>m</code></td>
+<td>每个节点的邻居连接数（默认约 16）</td>
+<td>图更大、构建更慢、召回更高</td>
+</tr>
+<tr>
+<td><code>ef_construction</code></td>
+<td>构建时的候选队列长度（默认约 64）</td>
+<td>构建更慢、图质量更好</td>
+</tr>
+<tr>
+<td><code>hnsw.ef_search</code></td>
+<td><strong>查询时</strong>候选队列长度（会话级可调）</td>
+<td>延迟上升、召回上升</td>
+</tr>
+</tbody></table>
+<p>实践要点：</p>
+<ol>
+<li><strong><code>ef_search</code> 是运行期最重要的旋钮</strong>，它必须不小于 <code>LIMIT</code>，否则结果会被截断；一般从 100 起步，按召回测试结果加。</li>
+<li><strong>HNSW 索引常驻缓存才快</strong>：索引比 <code>shared_buffers</code> 大很多时，延迟会明显抖，要么加内存，要么考虑量化/磁盘型索引方案。</li>
+<li><strong>构建很慢</strong>：千万级向量可能跑数小时，需要 <code>maintenance_work_mem</code> 拉高 + 并行构建 + <code>CONCURRENTLY</code>。</li>
+<li><strong>删除与更新会留下失效节点</strong>，索引会膨胀，靠 VACUUM 和后台清理维护；写多读少的表要定期观测索引体积，必要时 <code>REINDEX CONCURRENTLY</code>。</li>
+<li><strong>不要迷信默认值</strong>：不同维度、不同分布下最优 <code>m/ef</code> 差别很大，只能用 recall 测试来定。</li>
+</ol>
+<h3 id="2-3-IVFFlat：参数与坑"><a href="#2-3-IVFFlat：参数与坑" class="headerlink" title="2.3 IVFFlat：参数与坑"></a>2.3 IVFFlat：参数与坑</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>作用</th>
+<th>经验值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>lists</code></td>
+<td>聚类中心（桶）数量</td>
+<td>行数 &lt; 100 万取 <code>行数/1000</code>；更大取 <code>sqrt(行数)</code>，官方建议不超过 10 万</td>
+</tr>
+<tr>
+<td><code>ivfflat.probes</code></td>
+<td>查询扫描多少桶</td>
+<td>默认 1；提高则召回↑、延迟↑</td>
+</tr>
+</tbody></table>
+<p>坑：</p>
+<ol>
+<li><strong>不要对空表建 IVFFlat 索引</strong>：聚类中心会基于极少数据训练，之后数据增长就”桶分布失真”。正确做法是先灌一批真实数据再建索引。</li>
+<li><strong>数据漂移后要重建</strong>：话题分布变化（新增业务线）会让旧中心失效。</li>
+<li><strong>过滤条件强时同样退化</strong>：和 HNSW 一样的问题。</li>
+</ol>
+<h3 id="2-4-建索引实操"><a href="#2-4-建索引实操" class="headerlink" title="2.4 建索引实操"></a>2.4 建索引实操</h3><div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 先写入几十万条真实向量，再建索引</span></span><br><span class="line"><span class="keyword">SET</span> maintenance_work_mem <span class="operator">=</span> <span class="string">&#x27;2GB&#x27;</span>;</span><br><span class="line"><span class="keyword">SET</span> max_parallel_maintenance_workers <span class="operator">=</span> <span class="number">4</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">CREATE</span> INDEX CONCURRENTLY chunk_emb_idx</span><br><span class="line">  <span class="keyword">ON</span> chunk <span class="keyword">USING</span> hnsw (embedding vector_cosine_ops)</span><br><span class="line">  <span class="keyword">WITH</span> (m <span class="operator">=</span> <span class="number">16</span>, ef_construction <span class="operator">=</span> <span class="number">64</span>);</span><br></pre></td></tr></table></figure></div>
+
+<p>注意 <code>CONCURRENTLY</code> 不能放在事务块里；构建期间写放大明显，低峰执行；千万级建 HNSW 前先用 10% 采样估算时间和内存。</p>
+<h3 id="2-5-召回率怎么测（必做）"><a href="#2-5-召回率怎么测（必做）" class="headerlink" title="2.5 召回率怎么测（必做）"></a>2.5 召回率怎么测（必做）</h3><p>近似检索一定有召回损失，所以要用真值量化：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">1. 取 200~500 条真实查询（覆盖高频 + 长尾）</span><br><span class="line">2. 用「精确扫描」跑出每条查询的 top-k，作为 ground truth</span><br><span class="line">3. 用近似索引跑同样查询，改 ef_search / probes 做网格搜索</span><br><span class="line">4. 指标：recall@k、MRR；横轴是 P95 延迟</span><br><span class="line">5. 选&quot;延迟可接受范围内 recall 最高&quot;的那一档参数</span><br></pre></td></tr></table></figure></div>
+
+<div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 临时拿精确真值（小表可用；大表千万别在生产高峰跑）</span></span><br><span class="line"><span class="keyword">BEGIN</span>;</span><br><span class="line"><span class="keyword">SET</span> <span class="keyword">LOCAL</span> enableindexscan <span class="operator">=</span> off;</span><br><span class="line"><span class="keyword">SET</span> <span class="keyword">LOCAL</span> enablebitmapscan <span class="operator">=</span> off;</span><br><span class="line"><span class="keyword">SELECT</span> id <span class="keyword">FROM</span> chunk</span><br><span class="line"><span class="keyword">WHERE</span> tenant_id <span class="operator">=</span> <span class="number">42</span></span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> embedding <span class="operator">&lt;=&gt;</span> :qvec</span><br><span class="line">LIMIT <span class="number">10</span>;</span><br><span class="line"><span class="keyword">COMMIT</span>;</span><br></pre></td></tr></table></figure></div>
+
+<blockquote>
+<p>面试加分点：<strong>只说”HNSW 快”不合格，能说出”我用精确扫描当真值测 recall@10，把 ef_search 从 40 调到 200，recall 从 0.86 升到 0.97，P95 从 6ms 到 14ms，业务要求 P95&lt;30ms 所以取 200”，才是工程答案。</strong></p>
+</blockquote>
+<h3 id="2-6-量化：halfvec、二值、稀疏"><a href="#2-6-量化：halfvec、二值、稀疏" class="headerlink" title="2.6 量化：halfvec、二值、稀疏"></a>2.6 量化：halfvec、二值、稀疏</h3><p><strong>半精度 <code>halfvec</code></strong>：内存和磁盘直接减半，高维（&gt;2000）想建索引基本必须它；召回损失通常很小，但一定要自己测。</p>
+<p><strong>二值量化（两阶段检索）</strong>：先用 <code>bit</code> 索引粗召回大候选集，再用原始向量精排，内存可降一个数量级。</p>
+<div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 粗召回列：二值向量（pgvector 提供 binary_quantize，可用生成列或触发器维护）</span></span><br><span class="line"><span class="keyword">ALTER TABLE</span> chunk <span class="keyword">ADD</span> <span class="keyword">COLUMN</span> emb_bit bit(<span class="number">1024</span>)</span><br><span class="line">  GENERATED ALWAYS <span class="keyword">AS</span> (binary_quantize(embedding)) STORED;</span><br><span class="line"></span><br><span class="line"><span class="keyword">CREATE</span> INDEX chunk_bit_idx <span class="keyword">ON</span> chunk</span><br><span class="line">  <span class="keyword">USING</span> hnsw (emb_bit bit_hamming_ops) <span class="keyword">WITH</span> (m <span class="operator">=</span> <span class="number">16</span>, ef_construction <span class="operator">=</span> <span class="number">64</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 第一阶段：二值粗召回 200 条；第二阶段：用原始 vector 重排取 top 8</span></span><br><span class="line"><span class="keyword">WITH</span> coarse <span class="keyword">AS</span> (</span><br><span class="line">  <span class="keyword">SELECT</span> id <span class="keyword">FROM</span> chunk</span><br><span class="line">  <span class="keyword">ORDER</span> <span class="keyword">BY</span> emb_bit <span class="operator">&lt;</span><span class="operator">~</span><span class="operator">&gt;</span> :qbit        <span class="comment">-- Hamming 距离（以版本文档为准）</span></span><br><span class="line">  LIMIT <span class="number">200</span></span><br><span class="line">)</span><br><span class="line"><span class="keyword">SELECT</span> c.id, <span class="number">1</span> <span class="operator">-</span> (c.embedding <span class="operator">&lt;=&gt;</span> :qvec) <span class="keyword">AS</span> score</span><br><span class="line"><span class="keyword">FROM</span> chunk c <span class="keyword">JOIN</span> coarse g <span class="keyword">ON</span> g.id <span class="operator">=</span> c.id</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> c.embedding <span class="operator">&lt;=&gt;</span> :qvec</span><br><span class="line">LIMIT <span class="number">8</span>;</span><br></pre></td></tr></table></figure></div>
+
+<p><strong>稀疏向量 <code>sparsevec</code></strong>：SPLADE、BGE-M3 这类模型输出稀疏词权重，可以弥补稠密向量对”精确词项、型号、专有名词”的弱点，和稠密检索做融合。</p>
+<h2 id="03-检索质量：过滤、混合、重排"><a href="#03-检索质量：过滤、混合、重排" class="headerlink" title="03 检索质量：过滤、混合、重排"></a>03 检索质量：过滤、混合、重排</h2><h3 id="3-1-过滤检索为什么难"><a href="#3-1-过滤检索为什么难" class="headerlink" title="3.1 过滤检索为什么难"></a>3.1 过滤检索为什么难</h3><div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> id <span class="keyword">FROM</span> chunk</span><br><span class="line"><span class="keyword">WHERE</span> tenant_id <span class="operator">=</span> <span class="number">42</span> <span class="keyword">AND</span> doc_type <span class="operator">=</span> <span class="string">&#x27;faq&#x27;</span>      <span class="comment">-- 过滤后只剩 0.3% 的行</span></span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> embedding <span class="operator">&lt;=&gt;</span> :qvec</span><br><span class="line">LIMIT <span class="number">8</span>;</span><br></pre></td></tr></table></figure></div>
+
+<p>HNSW 在图上导航时<strong>不会因为你有 WHERE 就绕开不满足条件的节点</strong>：它照样遍历邻居，再检查过滤条件，于是访问大量”无效节点”，延迟可能从 6ms 涨到几百 ms，甚至优化器直接放弃索引走全表。这是 pgvector 最常被问到的真实痛点。</p>
+<h3 id="3-2-五种工程解法"><a href="#3-2-五种工程解法" class="headerlink" title="3.2 五种工程解法"></a>3.2 五种工程解法</h3><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>做法</th>
+<th>适合</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>部分索引</td>
+<td>对大租户单独建 <code>CREATE INDEX ... WHERE tenant_id = 42</code></td>
+<td>少数超大租户</td>
+</tr>
+<tr>
+<td>物理分组</td>
+<td>按租户/业务分表或分区，检索只打对应分区</td>
+<td>多租户 SaaS，最稳</td>
+</tr>
+<tr>
+<td>先标量后向量</td>
+<td>B-tree 过滤出候选 ID（几千条内）→ 内存/SQL 内精确算距离</td>
+<td>过滤性极强</td>
+</tr>
+<tr>
+<td>迭代扫描</td>
+<td>开启 HNSW 迭代扫描（新版本特性），拿到足量结果再停</td>
+<td>过滤后仍较密集</td>
+</tr>
+<tr>
+<td>降低过滤基数</td>
+<td>把高频过滤维度（语言、权限域、时间）做成分组索引或分片键</td>
+<td>维度少而固定</td>
+</tr>
+</tbody></table>
+<p>一句话总结方法论：<strong>过滤维度越固定、越能把数据切分开，向量检索就越接近”在小表里做检索”，越快越准。</strong></p>
+<h3 id="3-3-混合检索：关键词-向量-RRF"><a href="#3-3-混合检索：关键词-向量-RRF" class="headerlink" title="3.3 混合检索：关键词 + 向量 + RRF"></a>3.3 混合检索：关键词 + 向量 + RRF</h3><p>PG 里做关键词检索有两条路：</p>
+<ul>
+<li>原生 <code>tsvector</code> + GIN 索引（<code>websearch_to_tsquery</code>），<strong>中文需要 <code>zhparser</code>/<code>pg_jieba</code> 之类的分词扩展</strong>；</li>
+<li>BM25 排序需要扩展（如 ParadeDB 的 <code>pg_search</code>），原生 <code>ts_rank</code> 不等于 BM25。</li>
+</ul>
+<p>RRF（倒数排名融合）把两路结果合并：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">score(d) = Σ  1 / (k + rank_i(d))          常用 k = 60</span><br></pre></td></tr></table></figure></div>
+
+<div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">WITH</span> vec <span class="keyword">AS</span> (</span><br><span class="line">  <span class="keyword">SELECT</span> id, <span class="built_in">ROW_NUMBER</span>() <span class="keyword">OVER</span> (<span class="keyword">ORDER</span> <span class="keyword">BY</span> embedding <span class="operator">&lt;=&gt;</span> :qvec) <span class="keyword">AS</span> r</span><br><span class="line">  <span class="keyword">FROM</span> chunk</span><br><span class="line">  <span class="keyword">WHERE</span> tenant_id <span class="operator">=</span> :t</span><br><span class="line">  <span class="keyword">ORDER</span> <span class="keyword">BY</span> embedding <span class="operator">&lt;=&gt;</span> :qvec</span><br><span class="line">  LIMIT <span class="number">50</span></span><br><span class="line">), kw <span class="keyword">AS</span> (</span><br><span class="line">  <span class="keyword">SELECT</span> id, <span class="built_in">ROW_NUMBER</span>() <span class="keyword">OVER</span> (<span class="keyword">ORDER</span> <span class="keyword">BY</span> ts_rank(tsv, websearch_to_tsquery(:q)) <span class="keyword">DESC</span>) <span class="keyword">AS</span> r</span><br><span class="line">  <span class="keyword">FROM</span> chunk</span><br><span class="line">  <span class="keyword">WHERE</span> tenant_id <span class="operator">=</span> :t <span class="keyword">AND</span> tsv @@ websearch_to_tsquery(:q)</span><br><span class="line">  LIMIT <span class="number">50</span></span><br><span class="line">)</span><br><span class="line"><span class="keyword">SELECT</span> id, <span class="built_in">SUM</span>(<span class="number">1.0</span> <span class="operator">/</span> (<span class="number">60</span> <span class="operator">+</span> r)) <span class="keyword">AS</span> rrf_score</span><br><span class="line"><span class="keyword">FROM</span> (<span class="keyword">SELECT</span> id, r <span class="keyword">FROM</span> vec <span class="keyword">UNION</span> <span class="keyword">ALL</span> <span class="keyword">SELECT</span> id, r <span class="keyword">FROM</span> kw) x</span><br><span class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> id</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> rrf_score <span class="keyword">DESC</span></span><br><span class="line">LIMIT <span class="number">8</span>;</span><br></pre></td></tr></table></figure></div>
+
+<p>为什么必须混合：向量检索擅长”同义改写、语义相近”，关键词检索擅长”型号、法条号、报错码、专有名词”，两者失败模式不同，融合比单挑一个稳得多。</p>
+<h3 id="3-4-两阶段：召回-重排（Rerank）"><a href="#3-4-两阶段：召回-重排（Rerank）" class="headerlink" title="3.4 两阶段：召回 + 重排（Rerank）"></a>3.4 两阶段：召回 + 重排（Rerank）</h3><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>模型</th>
+<th>数量</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>召回</td>
+<td>Embedding（bi-encoder，查询和文档分别编码）</td>
+<td>top 50~100</td>
+<td>快，可建索引</td>
+</tr>
+<tr>
+<td>精排</td>
+<td>Cross-Encoder / Reranker（查询与文档拼一起打分）</td>
+<td>top 5~10</td>
+<td>准，但每次都要前向计算，无法预建索引</td>
+</tr>
+</tbody></table>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">过滤候选 → 向量召回 + 关键词召回 → RRF 融合 → Rerank 精排 → 截断 → 交给 LLM</span><br></pre></td></tr></table></figure></div>
+
+<p>要点：</p>
+<ul>
+<li>Rerank 是<strong>性价比最高的一步效果优化</strong>，通常能把 top-5 命中率显著提升；</li>
+<li>代价是延迟（+50~200ms）和 GPU/CPU 推理成本，k 太大不划算；</li>
+<li>自建可选开源 reranker（推理服务化），或用商业 Rerank API；</li>
+<li>别把 100 条文档全塞进 LLM 上下文：<strong>context 越长，生成成本和幻觉风险越高</strong>。</li>
+</ul>
+<h3 id="3-5-相似度阈值与”检索不到”的设计"><a href="#3-5-相似度阈值与”检索不到”的设计" class="headerlink" title="3.5 相似度阈值与”检索不到”的设计"></a>3.5 相似度阈值与”检索不到”的设计</h3><ul>
+<li>余弦相似度的绝对值<strong>跨模型、跨领域不可比</strong>，不要写死”score &gt; 0.8 才算命中”；</li>
+<li>正确做法：用标注集统计分数分布，把阈值定在”误召回可接受”的位置，并持续回归；</li>
+<li>一定要给”没检索到”留出口：返回”知识库无相关内容”、或降级到宽检索/人工，比硬凑答案安全得多；</li>
+<li>阈值之外还有<strong>排序质量</strong>：top1 不相关比 top10 不相关更致命。</li>
+</ul>
+<h3 id="3-6-一次完整检索链路（生产形态）"><a href="#3-6-一次完整检索链路（生产形态）" class="headerlink" title="3.6 一次完整检索链路（生产形态）"></a>3.6 一次完整检索链路（生产形态）</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">用户问题</span><br><span class="line">  ├─ 权限过滤（RLS / tenant_id / 文档密级）</span><br><span class="line">  ├─ 查询预处理（纠错、改写、拆子问题）</span><br><span class="line">  ├─ 向量召回（HNSW，top 50，带过滤）</span><br><span class="line">  ├─ 关键词召回（tsvector/BM25，top 50）</span><br><span class="line">  ├─ RRF 融合 → top 30</span><br><span class="line">  ├─ Rerank → top 5~8</span><br><span class="line">  ├─ 父子文档展开（检索用小块，展示用大块，保上下文完整）</span><br><span class="line">  └─ 组装 Prompt（引用编号 + 来源）交给生成模型</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="04-Embedding-选型：语义粒度-×-成本-×-部署"><a href="#04-Embedding-选型：语义粒度-×-成本-×-部署" class="headerlink" title="04 Embedding 选型：语义粒度 × 成本 × 部署"></a>04 Embedding 选型：语义粒度 × 成本 × 部署</h2><h3 id="4-1-七个选型维度"><a href="#4-1-七个选型维度" class="headerlink" title="4.1 七个选型维度"></a>4.1 七个选型维度</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>要看什么</th>
+<th>常见误判</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>任务匹配</td>
+<td>中文/多语/代码/长文档/图文</td>
+<td>拿通用模型硬啃代码</td>
+</tr>
+<tr>
+<td>语义粒度</td>
+<td>擅长短句匹配还是段落概括</td>
+<td>用句级模型做长文档检索</td>
+</tr>
+<tr>
+<td>维度</td>
+<td>存储、索引、内存、延迟成本</td>
+<td>盲目上 3072 维</td>
+</tr>
+<tr>
+<td>最大输入长度</td>
+<td>决定 chunk 切分上限</td>
+<td>模型只支持 512 token 却切 2000 字</td>
+</tr>
+<tr>
+<td>部署约束</td>
+<td>私有化/合规/离线/数据出境</td>
+<td>选完才发现不能出内网</td>
+</tr>
+<tr>
+<td>推理成本</td>
+<td>API 单价 + 吞吐，或自建 GPU 账</td>
+<td>只比效果不比成本</td>
+</tr>
+<tr>
+<td>版本与许可</td>
+<td>模型是否长期可用、开源协议、可复现</td>
+<td>静默升级导致向量空间漂移</td>
+</tr>
+</tbody></table>
+<h3 id="4-2-候选分层（记路线，不背型号）"><a href="#4-2-候选分层（记路线，不背型号）" class="headerlink" title="4.2 候选分层（记路线，不背型号）"></a>4.2 候选分层（记路线，不背型号）</h3><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>代表路线</th>
+<th>特点</th>
+<th>注意</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>闭源 API 通用</td>
+<td>OpenAI text-embedding-3 系列、Voyage、Cohere Embed、Jina</td>
+<td>省心、效果好、支持降维</td>
+<td>锁定与出境</td>
+</tr>
+<tr>
+<td>云内置</td>
+<td>AWS Titan、Azure/GCP 服务</td>
+<td>与云生态打通</td>
+<td>跨云迁移难</td>
+</tr>
+<tr>
+<td>开源自建</td>
+<td>BGE 系列（中文友好）、GTE、E5/mE5、Nomic、Qwen3-Embedding</td>
+<td>可私有化、成本可控</td>
+<td>需要推理服务与 GPU</td>
+</tr>
+<tr>
+<td>长文本</td>
+<td>BGE-M3、jina-embeddings-v3 等长上下文模型</td>
+<td>单向量容纳更多内容</td>
+<td>长文档单向量仍会丢细节</td>
+</tr>
+<tr>
+<td>代码专用</td>
+<td>voyage-code-3、代码微调版开源模型</td>
+<td>标识符/API 语义更准</td>
+<td>通用模型对 <code>NullPointerException</code> 这类不敏感</td>
+</tr>
+<tr>
+<td>多模态</td>
+<td>CLIP/SigLIP 图文、jina-clip</td>
+<td>图搜、图文对齐</td>
+<td>文本向量与图像向量不同空间要分列</td>
+</tr>
+<tr>
+<td>稀疏/混合</td>
+<td>SPLADE、BGE-M3 稀疏输出</td>
+<td>精确词项友好</td>
+<td>需 <code>sparsevec</code> 或关键词引擎配合</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>具体型号、维度、上下文长度变化极快，公开榜单（MTEB/BEIR）<strong>只用来缩小候选范围</strong>，不能替代自有评测集。</p>
+</blockquote>
+<h3 id="4-3-维度不是越高越好"><a href="#4-3-维度不是越高越好" class="headerlink" title="4.3 维度不是越高越好"></a>4.3 维度不是越高越好</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">单条向量体积 = 维度 × 精度字节数</span><br><span class="line">1024 维 float32 = 4 KB/条   → 100 万条 ≈ 4 GB（还没算索引）</span><br><span class="line">1024 维 halfvec  = 2 KB/条   → 100 万条 ≈ 2 GB</span><br><span class="line">1024 维 bit      = 128 B/条  → 100 万条 ≈ 128 MB</span><br></pre></td></tr></table></figure></div>
+
+<p>维度翻倍带来的连锁反应：存储、索引内存、构建时间、距离计算延迟、网络传输全部上涨；而<strong>边际收益通常在 512~1024 维之后就明显放缓</strong>。</p>
+<p><strong>Matryoshka（MRL）降维</strong>是实用技巧：支持该训练的模型（OpenAI 提供 <code>dimensions</code> 参数、部分开源模型支持）可以截断向量维度，直接跑 recall@10 对比 256/512/1024，选拐点。</p>
+<p>还有一个 PG 特有理由：<strong>行内存储有上限，超高维向量会触发 TOAST 压缩/外存，检索时要多一次取回</strong>，<code>halfvec</code> 能缓解。</p>
+<h3 id="4-4-归一化与距离函数"><a href="#4-4-归一化与距离函数" class="headerlink" title="4.4 归一化与距离函数"></a>4.4 归一化与距离函数</h3><ul>
+<li>多数文本 embedding 输出<strong>已归一化</strong>，此时 cosine 与内积的排序等价；</li>
+<li>未归一化时用 cosine 更稳（不受向量模长影响）；L2 对模长敏感，适合某些视觉/几何分布；</li>
+<li><strong>索引 opclass 一旦选定就别改</strong>：用 <code>vector_cosine_ops</code> 建的索引，查询也必须用 <code>&lt;=&gt;</code>；</li>
+<li>绝对禁止：不同模型 / 不同版本的向量写进同一列。<strong>向量空间不可比，是最隐蔽的线上事故</strong>（检索照常返回结果，只是全都不相关）。</li>
+</ul>
+<h3 id="4-5-query-document-非对称与-chunk-策略"><a href="#4-5-query-document-非对称与-chunk-策略" class="headerlink" title="4.5 query / document 非对称与 chunk 策略"></a>4.5 query / document 非对称与 chunk 策略</h3><ul>
+<li>有些模型要求加前缀（如 <code>query:</code> / <code>passage:</code> 类指令前缀），查询和入库必须按各自角色处理；<strong>前缀漏写会导致召回静默下滑</strong>；</li>
+<li><strong>检索单元 ≠ 展示单元</strong>：用小块（200<del>500 字、含 10%</del>20% overlap 或语义边界）做向量匹配，命中后返回父文档/整节给模型，兼顾精度和上下文完整性；</li>
+<li>上下文相关技巧：给 chunk 加”所属文档标题 + 一句话摘要”前缀再 embedding（contextual chunk），显著改善”这段讲的是什么”的判别；</li>
+<li>元数据要进 WHERE：部门、时间、密级、语言、版本，过滤越准，噪声越少。</li>
+</ul>
+<h3 id="4-6-换模型怎么迁移（高频追问）"><a href="#4-6-换模型怎么迁移（高频追问）" class="headerlink" title="4.6 换模型怎么迁移（高频追问）"></a>4.6 换模型怎么迁移（高频追问）</h3><p>换 embedding = 全量重嵌入 + 重建索引，标准流程：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">1. 表里同时保留 embedding_v1 / embedding_v2 两列（或影子表）</span><br><span class="line">2. 记录 embedding_model、embedding_dim、chunk_strategy 到每行或版本表</span><br><span class="line">3. 批量重嵌入（限速、断点续跑，估算：文档数 × 平均 token × 单价）</span><br><span class="line">4. 在 v2 列上建索引，用同一批评测查询跑 recall 对比</span><br><span class="line">5. 灰度切读（按租户/流量比例），线上 A/B 看答案质量与拒答率</span><br><span class="line">6. 观察期结束后删旧列、清理旧索引</span><br></pre></td></tr></table></figure></div>
+
+<p>千万级重嵌入的账要提前算：既是钱的问题，也是几天的批处理窗口和索引重建时间。</p>
+<h3 id="4-7-评测集与指标"><a href="#4-7-评测集与指标" class="headerlink" title="4.7 评测集与指标"></a>4.7 评测集与指标</h3><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>recall@k</td>
+<td>top-k 中命中标注相关文档的比例，<strong>检索层最重要</strong></td>
+</tr>
+<tr>
+<td>MRR</td>
+<td>第一条正确结果的排名倒数均值</td>
+</tr>
+<tr>
+<td>nDCG@10</td>
+<td>考虑排序位置的增益</td>
+</tr>
+<tr>
+<td>答案正确率</td>
+<td>端到端 RAG 质量，含生成</td>
+</tr>
+<tr>
+<td>P95 延迟 / QPS</td>
+<td>检索链路性能</td>
+</tr>
+<tr>
+<td>每千次查询成本</td>
+<td>embedding + 检索 + rerank + 生成</td>
+</tr>
+</tbody></table>
+<p>建集方法：真实 query 日志抽样 200~500 条 → 人工标注”哪几段相关” → 每次换模型/改索引/调 <code>ef_search</code> 都回归。<strong>没有评测集的向量检索调参，等于蒙眼调参。</strong></p>
+<h2 id="05-pgvector-vs-专用向量库"><a href="#05-pgvector-vs-专用向量库" class="headerlink" title="05 pgvector vs 专用向量库"></a>05 pgvector vs 专用向量库</h2><h3 id="5-1-横向对比"><a href="#5-1-横向对比" class="headerlink" title="5.1 横向对比"></a>5.1 横向对比</h3><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>形态</th>
+<th>优势</th>
+<th>短板</th>
+<th>适合</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>pgvector</strong></td>
+<td>PostgreSQL 扩展</td>
+<td>事务/权限/JOIN/一套运维、混合检索方便</td>
+<td>单机规模、过滤检索弱、无 GPU/分布式</td>
+<td>千万级以内、数据本就在 PG</td>
+</tr>
+<tr>
+<td>pgvectorscale</td>
+<td>PG 扩展（Timescale）</td>
+<td>磁盘型索引，大规模更省内存</td>
+<td>需要额外扩展与运维</td>
+<td>千万~亿级但仍想留在 PG</td>
+</tr>
+<tr>
+<td>Milvus</td>
+<td>专用分布式</td>
+<td>亿级、GPU 索引、多索引类型</td>
+<td>架构复杂（对象存储/MQ/多组件）</td>
+<td>超大规模、多模态</td>
+</tr>
+<tr>
+<td>Qdrant</td>
+<td>专用（Rust）</td>
+<td>过滤表达式与 payload 索引强、部署简单</td>
+<td>生态相对小</td>
+<td>中高规模 + 复杂过滤</td>
+</tr>
+<tr>
+<td>Weaviate</td>
+<td>专用</td>
+<td>内置向量化模块、GraphQL</td>
+<td>学习曲线、运维</td>
+<td>一体化方案</td>
+</tr>
+<tr>
+<td>Pinecone 等托管</td>
+<td>SaaS</td>
+<td>免运维、弹性</td>
+<td>成本、数据出境、锁定</td>
+<td>快速上线且合规允许</td>
+</tr>
+<tr>
+<td>ES / OpenSearch</td>
+<td>检索引擎 + kNN</td>
+<td>关键词/聚合/权限成熟，混合检索天然</td>
+<td>向量性能与内存不如专用</td>
+<td>已有 ES、关键词权重大</td>
+</tr>
+<tr>
+<td>Redis Vector Set</td>
+<td>内存数据库</td>
+<td>延迟极低</td>
+<td>内存成本高、持久化弱</td>
+<td>小数据集热点检索</td>
+</tr>
+<tr>
+<td>FAISS / hnswlib</td>
+<td>进程内库</td>
+<td>灵活、离线实验快</td>
+<td>要自建服务化、增量、持久化</td>
+<td>原型与离线评测</td>
+</tr>
+</tbody></table>
+<h3 id="5-2-该换专用库的信号"><a href="#5-2-该换专用库的信号" class="headerlink" title="5.2 该换专用库的信号"></a>5.2 该换专用库的信号</h3><ol>
+<li>向量规模上到<strong>亿级</strong>，单实例内存装不下 HNSW；</li>
+<li><strong>过滤 + ANN 组合复杂</strong>（多字段、范围、地理），PG 反复优化仍达不到延迟目标；</li>
+<li>需要 <strong>GPU 建索引/检索</strong>、量化、分片等专用能力；</li>
+<li>多租户 + 多活 + 独立扩缩容，检索层想和业务库解耦；</li>
+<li>检索 QPS 把 PG 的连接与 CPU 抢爆，影响核心交易库。</li>
+</ol>
+<h3 id="5-3-不该换的理由（面试官爱听这个）"><a href="#5-3-不该换的理由（面试官爱听这个）" class="headerlink" title="5.3 不该换的理由（面试官爱听这个）"></a>5.3 不该换的理由（面试官爱听这个）</h3><ul>
+<li>数据量只有几十万到几百万，pgvector 精确扫描或 HNSW 都绰绰有余；</li>
+<li>需要事务一致性和行级权限，专用库要再实现一遍 ACL 与双写同步；</li>
+<li>团队没有向量库运维经验，引入的稳定性风险大于性能收益；</li>
+<li>“专用库 + PG 双写”带来的一致性坑，比检索慢 10ms 严重得多。</li>
+</ul>
+<blockquote>
+<p>金句：<strong>“检索系统的第一原则是：先让数据只有一份。能用 pgvector 满足 SLA，就不要新增一个需要高可用的存储。”</strong></p>
+</blockquote>
+<h2 id="06-容量与成本估算"><a href="#06-容量与成本估算" class="headerlink" title="06 容量与成本估算"></a>06 容量与成本估算</h2><h3 id="6-1-存储与内存"><a href="#6-1-存储与内存" class="headerlink" title="6.1 存储与内存"></a>6.1 存储与内存</h3><table>
+<thead>
+<tr>
+<th>规模</th>
+<th>维度/精度</th>
+<th>原始向量体积</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>100 万</td>
+<td>1024 / float32</td>
+<td>≈ 4 GB</td>
+<td>加索引、堆膨胀、HNSW 图开销后更大</td>
+</tr>
+<tr>
+<td>100 万</td>
+<td>1024 / halfvec</td>
+<td>≈ 2 GB</td>
+<td>&gt;2000 维基本必选</td>
+</tr>
+<tr>
+<td>100 万</td>
+<td>1024 / bit</td>
+<td>≈ 128 MB</td>
+<td>必须配合原始向量重排</td>
+</tr>
+<tr>
+<td>1000 万</td>
+<td>1024 / float32</td>
+<td>≈ 40 GB</td>
+<td>单机内存压力大，考虑量化/分区/专用库</td>
+</tr>
+<tr>
+<td>1 亿</td>
+<td>1024 / float32</td>
+<td>≈ 400 GB</td>
+<td>一般不再用单实例 PG 扛</td>
+</tr>
+</tbody></table>
+<p>估算口诀：<strong>先算”维度 × 精度 × 条数”，再看索引类型放大倍数，最后对比 <code>shared_buffers</code> 是否装得下热数据。</strong></p>
+<h3 id="6-2-Embedding-调用成本"><a href="#6-2-Embedding-调用成本" class="headerlink" title="6.2 Embedding 调用成本"></a>6.2 Embedding 调用成本</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">一次性入库成本 = 文档数 × 平均 token 数 × 每百万 token 单价</span><br><span class="line">持续增量成本   = 日新增文档 × 平均 token 数 × 单价</span><br><span class="line">查询成本       = 查询次数 × 短文本 token（通常可忽略）</span><br></pre></td></tr></table></figure></div>
+
+<p>例：100 万篇文档、平均每篇 500 token，即 5 亿 token 的一次性重嵌入；按每百万 token 0.02 美元计约 10 美元量级——<strong>重嵌入的钱往往不是大头，索引重建的时间和人力才是。</strong></p>
+<h3 id="6-3-一次-RAG-查询的成本结构"><a href="#6-3-一次-RAG-查询的成本结构" class="headerlink" title="6.3 一次 RAG 查询的成本结构"></a>6.3 一次 RAG 查询的成本结构</h3><table>
+<thead>
+<tr>
+<th>环节</th>
+<th>占比特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Query embedding</td>
+<td>极小（几十字 token）</td>
+</tr>
+<tr>
+<td>向量检索</td>
+<td>CPU/IO，主要成本是内存常驻</td>
+</tr>
+<tr>
+<td>Rerank</td>
+<td>30~50 次前向计算，GPU/延迟敏感</td>
+</tr>
+<tr>
+<td>LLM 生成</td>
+<td><strong>通常占绝对大头</strong>，context 长度直接乘进 token 成本</td>
+</tr>
+</tbody></table>
+<p>所以 <code>top-k</code> 不是越大越好：召回多给 20 条，可能让生成成本翻几倍而答案质量没提升。</p>
+<h2 id="07-高频面试题（12-问）"><a href="#07-高频面试题（12-问）" class="headerlink" title="07 高频面试题（12 问）"></a>07 高频面试题（12 问）</h2><p><strong>Q1：pgvector 和专用向量库怎么选？</strong><br>A：数据本来就在 PostgreSQL、规模千万级以内、需要事务/权限/JOIN，选 pgvector，避免双写和不一致；亿级、需要 GPU 索引、过滤条件极其复杂或要求极致延迟时上专用库。判断标准是 SLA 和数据一致性需求，不是”向量库听起来更专业”。</p>
+<p><strong>Q2：HNSW 和 IVFFlat 的区别？</strong><br>A：HNSW 是多层图导航，查询延迟最低、召回高，但索引大、构建慢、删除维护重；IVFFlat 是聚类分桶 + 扫若干桶，构建快、索引小，靠 <code>probes</code> 换召回，且必须先灌数据再建索引。在线检索默认 HNSW，写入量大或内存紧张考虑 IVFFlat。</p>
+<p><strong>Q3：<code>hnsw.ef_search</code> 调大会怎样？</strong><br>A：候选队列更大 → 搜索更深 → 召回上升，但延迟和 CPU 上升；必须不小于 <code>LIMIT</code>。正确调法是先用精确扫描测 recall@k，再在延迟预算内选档位。</p>
+<p><strong>Q4：为什么加了 <code>WHERE tenant_id = x</code> 就变慢？</strong><br>A：HNSW 图上遍历不感知过滤条件，访问大量被过滤掉的节点；过滤性太强时优化器甚至放弃索引全表扫描。解法是按租户分表/分区、部分索引、先标量过滤再对小候选集精确算距离、或启用新版迭代扫描。</p>
+<p><strong>Q5：embedding 维度越高越好吗？</strong><br>A：不是。维度带来存储、索引内存、构建时间、延迟全面上升，收益边际递减；用 MRL 截维或按 recall 拐点选 256/512/1024 更划算。</p>
+<p><strong>Q6：cosine、L2、内积怎么选？</strong><br>A：归一化向量下 cosine 与内积排序等价，用哪个都行，但<strong>索引 opclass 和查询算子必须一致</strong>；未归一化用 cosine 更稳；L2 对模长敏感。</p>
+<p><strong>Q7：换 embedding 模型怎么做？</strong><br>A：双列存储 + 记录模型/维度/chunk 策略 → 批量重嵌入 → 建新索引 → 用评测集对比 recall → 灰度切读 → A/B 看端到端答案质量 → 删旧列。核心风险是”新旧向量混列”导致检索静默劣化。</p>
+<p><strong>Q8：召回率怎么测？</strong><br>A：拿真实 query 建 200~500 条标注集，用小规模精确扫描做 ground truth，计算 recall@k、MRR、nDCG，并画出”延迟—召回”曲线选点。公开榜单只能初筛。</p>
+<p><strong>Q9：量化会不会掉效果？</strong><br>A：<code>halfvec</code> 一般损失很小；二值量化损失大，必须”粗召回大候选 + 原始向量重排”两阶段补回。任何量化都要用自有评测集验证，别信”官方说几乎无损”。</p>
+<p><strong>Q10：PG 里怎么做混合检索？</strong><br>A：<code>tsvector</code> + GIN 做关键词（中文要分词扩展，BM25 需要 pg_search 类扩展），向量用 HNSW，两路各取 top 50 后用 RRF 融合，再可选 cross-encoder rerank。</p>
+<p><strong>Q11：需要 rerank 吗？</strong><br>A：多数严肃 RAG 都需要。bi-encoder 召回快但排序粗，cross-encoder 精排准但不能预建索引，典型做法是召回 50<del>100 → 精排取 5</del>8，用延迟换准确率。</p>
+<p><strong>Q12：pgvector 常见的坑有哪些？</strong><br>A：① 维度写死与模型输出不一致；② 查询算子和索引 opclass 不匹配导致不走索引；③ 强过滤下检索退化；④ HNSW 索引大于缓存导致延迟抖动；⑤ 空表建 IVFFlat；⑥ 不同模型向量混列；⑦ 删除更新造成索引膨胀，需要 VACUUM/REINDEX；⑧ 高维触发 TOAST；⑨ 单机规模上限，需要分表/分区或换方案。</p>
+<h2 id="08-一页纸速查"><a href="#08-一页纸速查" class="headerlink" title="08 一页纸速查"></a>08 一页纸速查</h2><table>
+<thead>
+<tr>
+<th>关键词</th>
+<th>一句话</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>pgvector</td>
+<td>PostgreSQL 扩展，向量与业务数据同库同事务</td>
+</tr>
+<tr>
+<td><code>vector</code> / <code>halfvec</code> / <code>bit</code> / <code>sparsevec</code></td>
+<td>稠密 fp32 / fp16 / 二值 / 稀疏</td>
+</tr>
+<tr>
+<td><code>&lt;-&gt;</code> <code>&lt;=&gt;</code> <code>&lt;#&gt;</code></td>
+<td>L2 / cosine / 负内积，索引必须对应 opclass</td>
+</tr>
+<tr>
+<td><code>ORDER BY 距离 LIMIT k</code></td>
+<td>触发近似检索的写法</td>
+</tr>
+<tr>
+<td>HNSW</td>
+<td>图索引，查询最快，构建重、内存大</td>
+</tr>
+<tr>
+<td><code>m</code> / <code>ef_construction</code></td>
+<td>建索引质量参数</td>
+</tr>
+<tr>
+<td><code>hnsw.ef_search</code></td>
+<td>运行期召回旋钮，≥ LIMIT</td>
+</tr>
+<tr>
+<td>IVFFlat</td>
+<td>聚类分桶，先有数据再建索引，<code>probes</code> 换召回</td>
+</tr>
+<tr>
+<td><code>maintenance_work_mem</code></td>
+<td>大索引构建前先调高</td>
+</tr>
+<tr>
+<td>二值量化两阶段</td>
+<td>粗召回 200 → 原始向量重排 top 8</td>
+</tr>
+<tr>
+<td>过滤检索难题</td>
+<td>图上遍历不感知 WHERE，需分组/部分索引</td>
+</tr>
+<tr>
+<td>RRF</td>
+<td><code>Σ 1/(k+rank)</code>，k 常用 60</td>
+</tr>
+<tr>
+<td>tsvector / GIN</td>
+<td>PG 关键词检索；中文要分词扩展</td>
+</tr>
+<tr>
+<td>bi-encoder vs cross-encoder</td>
+<td>召回靠前者，精排靠后者</td>
+</tr>
+<tr>
+<td>MRL / 降维</td>
+<td>用 recall 拐点选维度</td>
+</tr>
+<tr>
+<td>归一化</td>
+<td>让 cosine 与内积等价，混列大忌</td>
+</tr>
+<tr>
+<td>换模型</td>
+<td>双列 → 重嵌入 → 新索引 → 评测 → 灰度切读</td>
+</tr>
+<tr>
+<td>recall@k / MRR / nDCG</td>
+<td>检索层核心指标</td>
+</tr>
+</tbody></table>
+<h2 id="09-60-秒面试话术"><a href="#09-60-秒面试话术" class="headerlink" title="09 60 秒面试话术"></a>09 60 秒面试话术</h2><p><strong>问题</strong>：”知识库问答用 pgvector 落地，你怎么设计检索层？”</p>
+<p><strong>参考回答</strong>：</p>
+<blockquote>
+<p>我会先确认规模和一致性需求：向量列就放在 PostgreSQL 里，和文档、权限、元数据同一事务写入，避免双写不一致。索引默认 HNSW、余弦距离，构建前先灌真实数据、调高 <code>maintenance_work_mem</code> 并用 <code>CONCURRENTLY</code>；上线后用精确扫描构造真值集测 recall@10，在延迟预算内调 <code>ef_search</code>，高维或内存吃紧就换 <code>halfvec</code>，甚至二值粗召回加原始向量重排。检索质量上，纯向量对型号、法条号这类精确词不友好，所以再加 <code>tsvector</code> 关键词召回，两路做 RRF 融合，最后用 cross-encoder rerank 取 top 5~8；多租户场景把租户维度做成物理分组，避免强过滤导致索引退化。Embedding 选型按”语义粒度、成本、部署约束”三条筛，中文/私有化会优先考虑可自建的开源模型并用自有评测集验证，模型和维度、chunk 策略都写进表里，换模型走双列重嵌入 + 灰度切读。什么时候换专用向量库：亿级规模、需要 GPU 索引、过滤表达式复杂到 pgvector 顶不住，否则我不建议为了”看起来专业”再引入一个需要高可用的存储。</p>
+</blockquote>
+<hr>
+<p><strong>最后记住三句话：</strong></p>
+<ol>
+<li><strong>pgvector 的核心竞争力是”同库”</strong>：事务、权限、JOIN、备份全白送，代价是规模上限和过滤检索的短板，扬长避短才是正解。</li>
+<li><strong>检索质量靠”链路”而不是”魔法参数”</strong>：过滤分组 + 混合检索 + RRF + Rerank + 评测集，比把 <code>ef_search</code> 调到 1000 有效得多。</li>
+<li><strong>Embedding 选型是一次长期承诺</strong>：它决定存储、索引、成本和迁移代价，先建评测集再选模型，绝不要用公开榜单替自己做决定。</li>
+</ol>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day21：pgvector向量检索落地与Embedding选型对比</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-10-26 17:33:27</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-10-26 17:33:27
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/10/26/复习知识点Day21-pgvector向量检索落地与Embedding选型对比/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
+</div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/RAG/">#RAG</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%9D%A2%E8%AF%95/">#面试</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">#复习知识点</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/PostgreSQL/">#PostgreSQL</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/pgvector/">#pgvector</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Embedding/">#Embedding</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%90%91%E9%87%8F%E6%A3%80%E7%B4%A2/">#向量检索</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/10/23/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day20-MySQL%E4%BC%98%E5%8C%96%E5%85%A8%E6%99%AF%E3%80%81%E9%AB%98%E9%A2%91%E9%9D%A2%E8%AF%95%E9%A2%98%E4%B8%8EPostgreSQL%E5%AF%B9%E6%AF%94/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day20：MySQL优化全景、高频面试题与PostgreSQL对比</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
+	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day21：pgvector向量检索落地与Embedding选型对比</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%88%E8%AF%B4%E7%BB%93%E8%AE%BA%EF%BC%9A%E4%B8%89%E5%BC%A0%E8%A1%A8%E5%85%88%E7%9C%8B%E5%85%A8%E8%B2%8C"><span class="nav-text">先说结论：三张表先看全貌</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#01-pgvector-%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9A%E6%8A%8A%E5%90%91%E9%87%8F%E6%94%BE%E8%BF%9B-PostgreSQL"><span class="nav-text">01 pgvector 是什么：把向量放进 PostgreSQL</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E7%B1%BB%E5%9E%8B%E4%B8%8E%E8%B7%9D%E7%A6%BB%E7%AE%97%E5%AD%90"><span class="nav-text">1.1 类型与距离算子</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E6%9C%80%E5%B0%8F%E5%8F%AF%E7%94%A8%E9%93%BE%E8%B7%AF"><span class="nav-text">1.2 最小可用链路</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%BE%88%E5%A4%9A%E5%9B%A2%E9%98%9F%E6%9C%80%E7%BB%88%E7%95%99%E5%9C%A8-pgvector"><span class="nav-text">1.3 为什么很多团队最终留在 pgvector</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#02-%E7%B4%A2%E5%BC%95%E9%80%89%E5%9E%8B%EF%BC%9A%E7%B2%BE%E7%A1%AE%E3%80%81IVFFlat%E3%80%81HNSW"><span class="nav-text">02 索引选型：精确、IVFFlat、HNSW</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E4%B8%89%E7%A7%8D%E6%A3%80%E7%B4%A2%E6%96%B9%E5%BC%8F%E5%AF%B9%E6%AF%94"><span class="nav-text">2.1 三种检索方式对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-HNSW%EF%BC%9A%E5%8F%82%E6%95%B0%E4%B8%8E%E5%9D%91"><span class="nav-text">2.2 HNSW：参数与坑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-IVFFlat%EF%BC%9A%E5%8F%82%E6%95%B0%E4%B8%8E%E5%9D%91"><span class="nav-text">2.3 IVFFlat：参数与坑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E5%BB%BA%E7%B4%A2%E5%BC%95%E5%AE%9E%E6%93%8D"><span class="nav-text">2.4 建索引实操</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-%E5%8F%AC%E5%9B%9E%E7%8E%87%E6%80%8E%E4%B9%88%E6%B5%8B%EF%BC%88%E5%BF%85%E5%81%9A%EF%BC%89"><span class="nav-text">2.5 召回率怎么测（必做）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-6-%E9%87%8F%E5%8C%96%EF%BC%9Ahalfvec%E3%80%81%E4%BA%8C%E5%80%BC%E3%80%81%E7%A8%80%E7%96%8F"><span class="nav-text">2.6 量化：halfvec、二值、稀疏</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#03-%E6%A3%80%E7%B4%A2%E8%B4%A8%E9%87%8F%EF%BC%9A%E8%BF%87%E6%BB%A4%E3%80%81%E6%B7%B7%E5%90%88%E3%80%81%E9%87%8D%E6%8E%92"><span class="nav-text">03 检索质量：过滤、混合、重排</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E8%BF%87%E6%BB%A4%E6%A3%80%E7%B4%A2%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9A%BE"><span class="nav-text">3.1 过滤检索为什么难</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E4%BA%94%E7%A7%8D%E5%B7%A5%E7%A8%8B%E8%A7%A3%E6%B3%95"><span class="nav-text">3.2 五种工程解法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E6%B7%B7%E5%90%88%E6%A3%80%E7%B4%A2%EF%BC%9A%E5%85%B3%E9%94%AE%E8%AF%8D-%E5%90%91%E9%87%8F-RRF"><span class="nav-text">3.3 混合检索：关键词 + 向量 + RRF</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E4%B8%A4%E9%98%B6%E6%AE%B5%EF%BC%9A%E5%8F%AC%E5%9B%9E-%E9%87%8D%E6%8E%92%EF%BC%88Rerank%EF%BC%89"><span class="nav-text">3.4 两阶段：召回 + 重排（Rerank）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E7%9B%B8%E4%BC%BC%E5%BA%A6%E9%98%88%E5%80%BC%E4%B8%8E%E2%80%9D%E6%A3%80%E7%B4%A2%E4%B8%8D%E5%88%B0%E2%80%9D%E7%9A%84%E8%AE%BE%E8%AE%A1"><span class="nav-text">3.5 相似度阈值与”检索不到”的设计</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-6-%E4%B8%80%E6%AC%A1%E5%AE%8C%E6%95%B4%E6%A3%80%E7%B4%A2%E9%93%BE%E8%B7%AF%EF%BC%88%E7%94%9F%E4%BA%A7%E5%BD%A2%E6%80%81%EF%BC%89"><span class="nav-text">3.6 一次完整检索链路（生产形态）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#04-Embedding-%E9%80%89%E5%9E%8B%EF%BC%9A%E8%AF%AD%E4%B9%89%E7%B2%92%E5%BA%A6-%C3%97-%E6%88%90%E6%9C%AC-%C3%97-%E9%83%A8%E7%BD%B2"><span class="nav-text">04 Embedding 选型：语义粒度 × 成本 × 部署</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E4%B8%83%E4%B8%AA%E9%80%89%E5%9E%8B%E7%BB%B4%E5%BA%A6"><span class="nav-text">4.1 七个选型维度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%80%99%E9%80%89%E5%88%86%E5%B1%82%EF%BC%88%E8%AE%B0%E8%B7%AF%E7%BA%BF%EF%BC%8C%E4%B8%8D%E8%83%8C%E5%9E%8B%E5%8F%B7%EF%BC%89"><span class="nav-text">4.2 候选分层（记路线，不背型号）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E7%BB%B4%E5%BA%A6%E4%B8%8D%E6%98%AF%E8%B6%8A%E9%AB%98%E8%B6%8A%E5%A5%BD"><span class="nav-text">4.3 维度不是越高越好</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E5%BD%92%E4%B8%80%E5%8C%96%E4%B8%8E%E8%B7%9D%E7%A6%BB%E5%87%BD%E6%95%B0"><span class="nav-text">4.4 归一化与距离函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-query-document-%E9%9D%9E%E5%AF%B9%E7%A7%B0%E4%B8%8E-chunk-%E7%AD%96%E7%95%A5"><span class="nav-text">4.5 query &#x2F; document 非对称与 chunk 策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-6-%E6%8D%A2%E6%A8%A1%E5%9E%8B%E6%80%8E%E4%B9%88%E8%BF%81%E7%A7%BB%EF%BC%88%E9%AB%98%E9%A2%91%E8%BF%BD%E9%97%AE%EF%BC%89"><span class="nav-text">4.6 换模型怎么迁移（高频追问）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-7-%E8%AF%84%E6%B5%8B%E9%9B%86%E4%B8%8E%E6%8C%87%E6%A0%87"><span class="nav-text">4.7 评测集与指标</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#05-pgvector-vs-%E4%B8%93%E7%94%A8%E5%90%91%E9%87%8F%E5%BA%93"><span class="nav-text">05 pgvector vs 专用向量库</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E6%A8%AA%E5%90%91%E5%AF%B9%E6%AF%94"><span class="nav-text">5.1 横向对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E8%AF%A5%E6%8D%A2%E4%B8%93%E7%94%A8%E5%BA%93%E7%9A%84%E4%BF%A1%E5%8F%B7"><span class="nav-text">5.2 该换专用库的信号</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E4%B8%8D%E8%AF%A5%E6%8D%A2%E7%9A%84%E7%90%86%E7%94%B1%EF%BC%88%E9%9D%A2%E8%AF%95%E5%AE%98%E7%88%B1%E5%90%AC%E8%BF%99%E4%B8%AA%EF%BC%89"><span class="nav-text">5.3 不该换的理由（面试官爱听这个）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#06-%E5%AE%B9%E9%87%8F%E4%B8%8E%E6%88%90%E6%9C%AC%E4%BC%B0%E7%AE%97"><span class="nav-text">06 容量与成本估算</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E5%AD%98%E5%82%A8%E4%B8%8E%E5%86%85%E5%AD%98"><span class="nav-text">6.1 存储与内存</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-Embedding-%E8%B0%83%E7%94%A8%E6%88%90%E6%9C%AC"><span class="nav-text">6.2 Embedding 调用成本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E4%B8%80%E6%AC%A1-RAG-%E6%9F%A5%E8%AF%A2%E7%9A%84%E6%88%90%E6%9C%AC%E7%BB%93%E6%9E%84"><span class="nav-text">6.3 一次 RAG 查询的成本结构</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#07-%E9%AB%98%E9%A2%91%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%8812-%E9%97%AE%EF%BC%89"><span class="nav-text">07 高频面试题（12 问）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#08-%E4%B8%80%E9%A1%B5%E7%BA%B8%E9%80%9F%E6%9F%A5"><span class="nav-text">08 一页纸速查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#09-60-%E7%A7%92%E9%9D%A2%E8%AF%95%E8%AF%9D%E6%9C%AF"><span class="nav-text">09 60 秒面试话术</span></a></li></ol>
+
+	</div>
+</div>
+	</div>
+	
+</div>
+
+			</div>
+
+			
+		</div>
+
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2017</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">Percy jie</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 33 篇文章
+                    </span>
+                    
+                        <span>
+                            共 111.7k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
+
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
+	
+
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>

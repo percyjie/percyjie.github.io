@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="AI, Java, Security, Blog">
+    
+    
+    <meta name="author" content="Percy jie">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://percyjie.github.io/2026/11/02/复习知识点Day22-AI应用成本优化：模型路由、缓存命中与上下文压缩/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day22：AI应用成本优化：模型路由、缓存命中与上下文压缩">
+<meta property="og:url" content="https://percyjie.github.io/2026/11/02/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day22-AI%E5%BA%94%E7%94%A8%E6%88%90%E6%9C%AC%E4%BC%98%E5%8C%96%EF%BC%9A%E6%A8%A1%E5%9E%8B%E8%B7%AF%E7%94%B1%E3%80%81%E7%BC%93%E5%AD%98%E5%91%BD%E4%B8%AD%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E5%8E%8B%E7%BC%A9/index.html">
+<meta property="og:site_name" content="Percy&#39;s Note">
+<meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-11-02T09:20:27.000Z">
+<meta property="article:modified_time" content="2026-11-02T09:20:27.000Z">
+<meta property="article:author" content="Percy jie">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="上下文压缩">
+<meta property="article:tag" content="复习知识点">
+<meta property="article:tag" content="成本优化">
+<meta property="article:tag" content="提示词缓存">
+<meta property="article:tag" content="模型路由">
+<meta property="article:tag" content="面试">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            复习知识点Day22：AI应用成本优化：模型路由、缓存命中与上下文压缩 | Percy&#39;s Note
+        
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"percyjie.github.io","root":"/","language":"zh-CN"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"vs2015"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/redefine-og.webp","description":"人没有梦想，和咸鱼有什么分别"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Percy's Note","subtitle":{"text":["人没有梦想，和咸鱼有什么分别"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"default","links":[{"icon":"fa-brands fa-github","url":"https://github.com/percyjie"},{"icon":"fa-brands fa-weibo","url":"https://weibo.com/panjie0709"},{"icon":null,"url":null},{"icon":null,"url":null},{"icon":null,"url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"},"留言板":{"path":"/guestbook","icon":"fa-regular fa-comment-dots"},"心情":{"path":"/mood","icon":"fa-regular fa-face-smile"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"cloud","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":{"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"},"留言板":{"path":"/guestbook","icon":"fa-regular fa-comment-dots"},"心情":{"path":"/mood","icon":"fa-regular fa-face-smile"}}},"article_date_format":"auto","excerpt_length":200,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart fa-beat\" style=\"--fa-animation-duration: 0.5s; color: #f54545\"></i>","start":"2017/03/08 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2017/03/08 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                Percy&#39;s Note
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/tags"
+                                        >
+                                    <i class="fa-regular fa-tags fa-fw"></i>
+                                    标签
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/guestbook"
+                                        >
+                                    <i class="fa-regular fa-comment-dots fa-fw"></i>
+                                    留言板
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/mood"
+                                        >
+                                    <i class="fa-regular fa-face-smile fa-fw"></i>
+                                    心情
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/tags"
+                        >
+                            <span>
+                                标签
+                            </span>
+                            
+                                <i class="fa-regular fa-tags fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/guestbook"
+                        >
+                            <span>
+                                留言板
+                            </span>
+                            
+                                <i class="fa-regular fa-comment-dots fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/mood"
+                        >
+                            <span>
+                                心情
+                            </span>
+                            
+                                <i class="fa-regular fa-face-smile fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+                    
+                    
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">113</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">12</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">34</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+
+			<div class="main-content">
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
+
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day22：AI应用成本优化：模型路由、缓存命中与上下文压缩</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv4</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-11-02 17:20:27</span>
+        <span class="mobile">2026-11-02 17:20:27</span>
+        <span class="hover-info">创建</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-11-02 17:20:27</span>
+            <span class="mobile">2026-11-02 17:20:27</span>
+            <span class="hover-info">更新</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/AI-%E5%B7%A5%E7%A8%8B/">AI 工程</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/AI/">AI</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">复习知识点</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E6%88%90%E6%9C%AC%E4%BC%98%E5%8C%96/">成本优化</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E6%A8%A1%E5%9E%8B%E8%B7%AF%E7%94%B1/">模型路由</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E6%8F%90%E7%A4%BA%E8%AF%8D%E7%BC%93%E5%AD%98/">提示词缓存</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E4%B8%8A%E4%B8%8B%E6%96%87%E5%8E%8B%E7%BC%A9/">上下文压缩</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>7.3k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>26 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天：<strong>账单 = Token 数 × 单价 × 调用次数</strong>，三个因子各对应一招——<strong>模型路由把 token 换到便宜的模型上、缓存命中让重复的 token 只付零头、上下文压缩把没必要发的 token 直接删掉</strong>。三招可以叠加，但每一步都必须用评测集守住质量，否则省下的钱会以”返工率”的形式还回去。Day17 里这些是面试答题点，这篇讲怎么真正落地。</p>
+</blockquote>
+<h2 id="先说结论"><a href="#先说结论" class="headerlink" title="先说结论"></a>先说结论</h2><table>
+<thead>
+<tr>
+<th>手段</th>
+<th>压的是哪个因子</th>
+<th>典型收益量级</th>
+<th>前置条件</th>
+<th>最大风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>模型路由 / 级联</td>
+<td>单价</td>
+<td>60%~90%</td>
+<td>任务可分类、有评测集</td>
+<td>路由错误把难任务送小模型</td>
+</tr>
+<tr>
+<td>提示词缓存</td>
+<td>输入单价</td>
+<td>输入侧 30%~80%</td>
+<td>前缀内容稳定</td>
+<td>布局写乱导致命中率≈0</td>
+</tr>
+<tr>
+<td>语义缓存（结果缓存）</td>
+<td>调用次数</td>
+<td>重复问题 50%~90%</td>
+<td>只读、可容忍陈旧</td>
+<td>错误命中、串租户、缓存投毒</td>
+</tr>
+<tr>
+<td>上下文压缩</td>
+<td>输入 token</td>
+<td>20%~60%</td>
+<td>有质量回归</td>
+<td>丢掉硬约束和数字</td>
+</tr>
+<tr>
+<td>输出控制</td>
+<td>输出 token</td>
+<td>10%~40%</td>
+<td>明确输出契约</td>
+<td>被截断、字段缺失</td>
+</tr>
+<tr>
+<td>减少轮次 / 并行工具</td>
+<td>调用次数</td>
+<td>30%~60%</td>
+<td>Agent 流程可重排</td>
+<td>早停漏步骤</td>
+</tr>
+<tr>
+<td>Batch API</td>
+<td>单价</td>
+<td>常见约五折</td>
+<td>任务离线</td>
+<td>不实时</td>
+</tr>
+<tr>
+<td>蒸馏 / 微调小模型</td>
+<td>单价 + 延迟</td>
+<td>长期显著</td>
+<td>有数据、任务稳定</td>
+<td>前期投入与维护</td>
+</tr>
+</tbody></table>
+<p>一句方法论：<strong>先归因，再优化</strong>。不知道钱花在哪个环节，所有优化都是猜；很多团队一上来换小模型，结果发现 60% 成本是同一份固定前缀没命中缓存。</p>
+<h2 id="01-先算清钱花在哪：成本归因"><a href="#01-先算清钱花在哪：成本归因" class="headerlink" title="01 先算清钱花在哪：成本归因"></a>01 先算清钱花在哪：成本归因</h2><h3 id="1-1-四类要计费的-token"><a href="#1-1-四类要计费的-token" class="headerlink" title="1.1 四类要计费的 token"></a>1.1 四类要计费的 token</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>说明</th>
+<th>常见误区</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>输入 prompt</td>
+<td>system、工具定义、few-shot、历史、RAG 片段、本轮输入</td>
+<td>以为”只有用户输入算钱”</td>
+</tr>
+<tr>
+<td>输出 completion</td>
+<td>生成的 token</td>
+<td>单价通常远高于输入</td>
+</tr>
+<tr>
+<td>推理 / reasoning token</td>
+<td>思考型模型内部推理也计费</td>
+<td>完全忽略，账单超预期数倍</td>
+</tr>
+<tr>
+<td>缓存 token</td>
+<td>命中价与写入价分开计</td>
+<td>只看总 token，不看命中字段</td>
+</tr>
+</tbody></table>
+<p>两个必须记住的单价事实：</p>
+<ol>
+<li><strong>输出比输入贵一个数量级方向</strong>（常见 3~5 倍）：<code>SELECT</code> 式的长复述是隐形成本；</li>
+<li><strong>推理 token 按输出价计</strong>：数学、代码、复杂规划任务里，它可能比正文长好几倍。</li>
+</ol>
+<h3 id="1-2-调用次数是怎么放大的"><a href="#1-2-调用次数是怎么放大的" class="headerlink" title="1.2 调用次数是怎么放大的"></a>1.2 调用次数是怎么放大的</h3><p>多轮对话最烧钱的地方不是”每轮说了什么”，而是<strong>每轮都要把历史重新发一遍</strong>：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">第 1 轮输入：固定前缀 + 用户1</span><br><span class="line">第 2 轮输入：固定前缀 + 用户1 + 回复1 + 用户2</span><br><span class="line">第 3 轮输入：固定前缀 + 用户1 + 回复1 + 用户2 + 回复2 + 用户3</span><br><span class="line">累计输入 token ≈ 固定前缀×n + 历史长度的 1+2+...+n  ≈ O(n²)</span><br></pre></td></tr></table></figure></div>
+
+<p>所以：<strong>10 轮会话的累计输入可能是”单轮平均”的 5 倍以上</strong>。其他放大器：Agent 循环（每轮带全量上下文）、工具结果原样回填、格式失败重试、LLM-as-Judge 全量评审、路由判定自身。</p>
+<h3 id="1-3-归因表（没有这个就没法优化）"><a href="#1-3-归因表（没有这个就没法优化）" class="headerlink" title="1.3 归因表（没有这个就没法优化）"></a>1.3 归因表（没有这个就没法优化）</h3><div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE TABLE</span> llm_call_log (</span><br><span class="line">  id                BIGSERIAL <span class="keyword">PRIMARY KEY</span>,</span><br><span class="line">  session_id        TEXT,</span><br><span class="line">  feature           TEXT <span class="keyword">NOT NULL</span>,      <span class="comment">-- 业务功能：intent / rag_answer / extract / agent</span></span><br><span class="line">  model             TEXT <span class="keyword">NOT NULL</span>,      <span class="comment">-- 精确到模型 ID</span></span><br><span class="line">  route_decision    TEXT,               <span class="comment">-- 路由判定的档位与原因</span></span><br><span class="line">  tokens_in         <span class="type">INT</span>,</span><br><span class="line">  tokens_out        <span class="type">INT</span>,</span><br><span class="line">  tokens_reason     <span class="type">INT</span>,                <span class="comment">-- 推理 token</span></span><br><span class="line">  tokens_cache_read  <span class="type">INT</span>,</span><br><span class="line">  tokens_cache_write <span class="type">INT</span>,</span><br><span class="line">  cost              <span class="type">NUMERIC</span>(<span class="number">12</span>,<span class="number">6</span>),</span><br><span class="line">  latency_ms        <span class="type">INT</span>,</span><br><span class="line">  ttft_ms           <span class="type">INT</span>,</span><br><span class="line">  success           <span class="type">BOOLEAN</span>,</span><br><span class="line">  created_at        TIMESTAMPTZ <span class="keyword">DEFAULT</span> now()</span><br><span class="line">);</span><br></pre></td></tr></table></figure></div>
+
+<p>看板至少五个指标：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>每千次请求成本（按 feature 分组）</td>
+<td>找真正的成本大头</td>
+</tr>
+<tr>
+<td>缓存命中率（读 token / 总输入 token）</td>
+<td>判断前缀布局是否有效</td>
+</tr>
+<tr>
+<td>平均输入 / 输出 / 推理 token</td>
+<td>判断压缩空间</td>
+</tr>
+<tr>
+<td>路由升级率、错分代价</td>
+<td>判断路由是否省钱不省质量</td>
+</tr>
+<tr>
+<td>重试率、Agent 平均轮次</td>
+<td>判断流程浪费</td>
+</tr>
+</tbody></table>
+<h3 id="1-4-一笔示例账（数字为假设，用于说明算法）"><a href="#1-4-一笔示例账（数字为假设，用于说明算法）" class="headerlink" title="1.4 一笔示例账（数字为假设，用于说明算法）"></a>1.4 一笔示例账（数字为假设，用于说明算法）</h3><p>固定前缀 system 1200 + 工具 600 + RAG 1800 = 3600/轮，每轮新增历史 400，输出 300/轮，三轮会话；输入 $1/百万、输出 $4/百万、缓存读 $0.1/百万：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>输入构成</th>
+<th>成本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>无缓存</td>
+<td>12000 输入 + 900 输出</td>
+<td>$0.0156</td>
+</tr>
+<tr>
+<td>前缀缓存命中 2 轮</td>
+<td>缓存读 7200 + 未缓存 4800 + 输出 900</td>
+<td>$0.0091（省 42%）</td>
+</tr>
+<tr>
+<td>再叠加语义缓存命中 FAQ</td>
+<td>22% 请求零调用</td>
+<td>约 $0.007（再省 ~20%）</td>
+</tr>
+</tbody></table>
+<h2 id="02-模型路由：送到”够用且最便宜”的那一档"><a href="#02-模型路由：送到”够用且最便宜”的那一档" class="headerlink" title="02 模型路由：送到”够用且最便宜”的那一档"></a>02 模型路由：送到”够用且最便宜”的那一档</h2><h3 id="2-1-三种路由形态"><a href="#2-1-三种路由形态" class="headerlink" title="2.1 三种路由形态"></a>2.1 三种路由形态</h3><table>
+<thead>
+<tr>
+<th>形态</th>
+<th>做法</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>静态规则</td>
+<td>按 <code>feature</code> 硬编码档位（意图=小模型，报告=大模型）</td>
+<td>简单、零额外延迟</td>
+<td>粒度粗，边界任务浪费或翻车</td>
+</tr>
+<tr>
+<td>分类器路由</td>
+<td>规则 + 轻量模型判定难度/风险，再选档</td>
+<td>精细、省钱</td>
+<td>判定本身有延迟与成本</td>
+</tr>
+<tr>
+<td>级联（cascade）</td>
+<td>先小模型，低置信或校验失败再升级</td>
+<td>质量兜底强</td>
+<td>两次调用，长尾延迟上升</td>
+</tr>
+</tbody></table>
+<p>生产常见组合：<strong>静态规则打底 + 级联兜底</strong>，分类器只在高流量、任务混合的场景引入。</p>
+<h3 id="2-2-七个路由信号"><a href="#2-2-七个路由信号" class="headerlink" title="2.2 七个路由信号"></a>2.2 七个路由信号</h3><ol>
+<li><strong>任务类型</strong>：抽取 / 分类 / 改写 / 推理 / 代码 / 规划；</li>
+<li><strong>输入长度</strong>：超长的检索问答直接给中档以上；</li>
+<li><strong>是否需要工具调用或严格结构化输出</strong>：小模型 schema 遵循能力弱；</li>
+<li><strong>领域与语言</strong>：方言、专业术语、多语混合；</li>
+<li><strong>风险等级</strong>：涉钱、涉法务、对外发布 → 直接高档 + 人工；</li>
+<li><strong>历史成功率</strong>：同一 feature 在不同模型上的回归表现；</li>
+<li><strong>置信度 / 校验结果</strong>：级联升级的触发条件（自评分低、schema 校验失败、检索无依据）。</li>
+</ol>
+<h3 id="2-3-代码骨架"><a href="#2-3-代码骨架" class="headerlink" title="2.3 代码骨架"></a>2.3 代码骨架</h3><div class="code-container" data-rel="Python"><figure class="iseeu highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">route</span>(<span class="params">req: Request</span>) -&gt; <span class="built_in">str</span>:</span><br><span class="line">    <span class="keyword">if</span> req.risk <span class="keyword">in</span> &#123;<span class="string">&quot;refund&quot;</span>, <span class="string">&quot;legal&quot;</span>, <span class="string">&quot;public_post&quot;</span>&#125;:</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;large&quot;</span>                      <span class="comment"># 高风险不省这点钱</span></span><br><span class="line">    <span class="keyword">if</span> req.kind <span class="keyword">in</span> &#123;<span class="string">&quot;intent&quot;</span>, <span class="string">&quot;extract&quot;</span>, <span class="string">&quot;classify&quot;</span>&#125; <span class="keyword">and</span> req.input_tokens &lt; <span class="number">3000</span>:</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;small&quot;</span></span><br><span class="line">    <span class="keyword">if</span> req.kind == <span class="string">&quot;agent_plan&quot;</span> <span class="keyword">or</span> req.input_tokens &gt; <span class="number">20000</span>:</span><br><span class="line">        <span class="keyword">return</span> <span class="string">&quot;large&quot;</span></span><br><span class="line">    <span class="keyword">return</span> <span class="string">&quot;medium&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">call_with_escalation</span>(<span class="params">req</span>):</span><br><span class="line">    model = route(req)</span><br><span class="line">    resp = client.chat(model=model, messages=req.messages, response_format=req.schema)</span><br><span class="line">    <span class="keyword">if</span> model != <span class="string">&quot;large&quot;</span> <span class="keyword">and</span> (resp.low_confidence <span class="keyword">or</span> <span class="keyword">not</span> resp.schema_valid):</span><br><span class="line">        log_event(<span class="string">&quot;route_escalate&quot;</span>, from_=model)                 <span class="comment"># 升级必须打点</span></span><br><span class="line">        resp = client.chat(model=<span class="string">&quot;large&quot;</span>, messages=req.messages, response_format=req.schema)</span><br><span class="line">    <span class="keyword">return</span> resp</span><br></pre></td></tr></table></figure></div>
+
+<p>配套三件事：供应商故障切换（同档位备选模型）、超时与降级、路由决策落库（离线复盘错分）。</p>
+<h3 id="2-4-路由器本身不能贵"><a href="#2-4-路由器本身不能贵" class="headerlink" title="2.4 路由器本身不能贵"></a>2.4 路由器本身不能贵</h3><ul>
+<li><strong>规则优先</strong>：80% 分流能靠 <code>feature + 长度 + 风险</code> 三元组解决；</li>
+<li>用轻量模型判难度时，判定延迟要压到几十毫秒级，否则不如固定档位；</li>
+<li><strong>同会话粘住档位</strong>：中途换模型会导致语气、格式、引用风格突变，用户能感觉到”换了个人”；</li>
+<li>路由结果缓存（同 session、同类问题不重复判定）。</li>
+</ul>
+<h3 id="2-5-怎么证明路由没伤质量"><a href="#2-5-怎么证明路由没伤质量" class="headerlink" title="2.5 怎么证明路由没伤质量"></a>2.5 怎么证明路由没伤质量</h3><table>
+<thead>
+<tr>
+<th>手段</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>分任务回归</td>
+<td>每个 feature 单独测准确率，不看总体平均分</td>
+</tr>
+<tr>
+<td>双跑抽样</td>
+<td>同请求同时跑大小模型，比对差异，估算”升级真实收益”</td>
+</tr>
+<tr>
+<td>混淆矩阵定价</td>
+<td>“简单判成难”= 浪费钱；”难判成简单”= 事故，给两类错误不同代价</td>
+</tr>
+<tr>
+<td>灰度放量</td>
+<td>按 user bucket 放量 5% → 20% → 100%，盯转人工率、投诉率</td>
+</tr>
+<tr>
+<td>一键回退</td>
+<td>路由开关配置化，出问题切回全量大模型</td>
+</tr>
+</tbody></table>
+<h3 id="2-6-坑"><a href="#2-6-坑" class="headerlink" title="2.6 坑"></a>2.6 坑</h3><ol>
+<li><strong>模型 ID 写死也要精确匹配</strong>：供应商静默更新会让回归结果失效；</li>
+<li><strong>小模型不支持严格 JSON</strong>：要么降级为”文本 + 解析”，要么该类任务不路由；</li>
+<li><strong>只看单价不看总成本</strong>：小模型重试率、人工复核率上升会把节省吃掉；</li>
+<li><strong>成本按单次调用算</strong>：应按”完成一次业务任务”算总账（含重试、工具、升级）。</li>
+</ol>
+<h2 id="03-缓存命中：重复的-token-只付一次钱"><a href="#03-缓存命中：重复的-token-只付一次钱" class="headerlink" title="03 缓存命中：重复的 token 只付一次钱"></a>03 缓存命中：重复的 token 只付一次钱</h2><h3 id="3-1-提示词缓存的机制"><a href="#3-1-提示词缓存的机制" class="headerlink" title="3.1 提示词缓存的机制"></a>3.1 提示词缓存的机制</h3><p>服务端把<strong>前缀</strong>的 KV 状态留住，下次请求前缀完全一致就复用，命中部分按折扣价计费，同时首 token 延迟（TTFT）显著下降。工程上要盯四个约束：</p>
+<table>
+<thead>
+<tr>
+<th>约束</th>
+<th>实际含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>前缀必须逐 token 相同</td>
+<td>一个字符差异（时间戳、空格、字段顺序）就整块不命中</td>
+</tr>
+<tr>
+<td>分块匹配</td>
+<td>一般按块（block）对齐，前缀长度不足门槛时不缓存</td>
+</tr>
+<tr>
+<td>最小长度门槛</td>
+<td>几百 token 的短前缀不值得缓存，常见门槛在千级 token 量级</td>
+</tr>
+<tr>
+<td>TTL 分钟级</td>
+<td>命中可续期；间隔久了要重新写入，写入可能加价</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>具体门槛、TTL、折扣比例各供应商不同，务必查当前价目与文档，别把”缓存一定省钱”当默认前提。</p>
+</blockquote>
+<h3 id="3-2-布局决定命中率（最容易踩的一节）"><a href="#3-2-布局决定命中率（最容易踩的一节）" class="headerlink" title="3.2 布局决定命中率（最容易踩的一节）"></a>3.2 布局决定命中率（最容易踩的一节）</h3><p>正确的排布是”稳定 → 半稳定 → 易变”：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">[稳定，可缓存]  system 指令</span><br><span class="line">               工具定义（顺序固定，字段顺序固定）</span><br><span class="line">               few-shot 示例（固定集合，别每次洗牌）</span><br><span class="line">               长期知识 / 静态文档</span><br><span class="line">[半稳定]       会话历史（只追加，不重排、不改写早期消息）</span><br><span class="line">[易变，放最后]  本轮用户输入、动态上下文（当前时间、请求 ID）</span><br></pre></td></tr></table></figure></div>
+
+<p>命中率杀手清单：</p>
+<ol>
+<li>在 system 里塞 <code>当前时间：2026-11-02 17:20</code> → <strong>每请求都不同，整块不命中</strong>；</li>
+<li>工具/字段用未排序的字典序列化，JSON key 顺序抖动；</li>
+<li>few-shot 每次随机抽样（RAG 式动态示例很贵，先测再上）；</li>
+<li>多租户内容拼进同一个”公共前缀”，导致前缀互不相同；</li>
+<li>改写早期历史（摘要替换原文）→ 之后的前缀全部失效；</li>
+<li>换模型或换 prompt 版本没同步缓存 key（不同模型不共享缓存）。</li>
+</ol>
+<h3 id="3-3-命中率怎么算、目标定多少"><a href="#3-3-命中率怎么算、目标定多少" class="headerlink" title="3.3 命中率怎么算、目标定多少"></a>3.3 命中率怎么算、目标定多少</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">命中率 = 缓存读 token / 总输入 token</span><br><span class="line">节省   = 缓存读 token × (标准输入单价 − 缓存读单价)</span><br></pre></td></tr></table></figure></div>
+
+<p>两个实操判断：</p>
+<ul>
+<li><strong>稳定前缀本身要够长</strong>（例如 ≥ 数千 token），否则省下的钱抵不上写入加价和复杂度；</li>
+<li><strong>命中率要看 P50 也要看分布</strong>：只有长会话命中、短请求全不命中的系统，收益远低于看板平均值。</li>
+</ul>
+<h3 id="3-4-语义缓存：整次调用都不用发"><a href="#3-4-语义缓存：整次调用都不用发" class="headerlink" title="3.4 语义缓存：整次调用都不用发"></a>3.4 语义缓存：整次调用都不用发</h3><div class="code-container" data-rel="Python"><figure class="iseeu highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">answer_with_cache</span>(<span class="params">q: <span class="built_in">str</span>, ctx: RequestContext</span>):</span><br><span class="line">    key = &#123;</span><br><span class="line">        <span class="string">&quot;tenant&quot;</span>: ctx.tenant_id,</span><br><span class="line">        <span class="string">&quot;acl_scope&quot;</span>: ctx.acl_hash,          <span class="comment"># 权限范围不同绝不能共用答案</span></span><br><span class="line">        <span class="string">&quot;prompt_version&quot;</span>: PROMPT_VERSION,</span><br><span class="line">        <span class="string">&quot;model&quot;</span>: MODEL_ID,</span><br><span class="line">    &#125;</span><br><span class="line">    hit = vec_lookup(embed(q), filters=key, threshold=<span class="number">0.95</span>)</span><br><span class="line">    <span class="keyword">if</span> hit:</span><br><span class="line">        <span class="keyword">return</span> CachedAnswer(hit.answer, source=hit.created_at)   <span class="comment"># 记录命中来源与时间</span></span><br><span class="line">    ans = generate(q, ctx)</span><br><span class="line">    vec_store(embed(q), ans, filters=key, ttl=ttl_for(ans))</span><br><span class="line">    <span class="keyword">return</span> ans</span><br></pre></td></tr></table></figure></div>
+
+<p>风险与缓解：</p>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>场景</th>
+<th>缓解</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>错误命中</td>
+<td>“退货几天” 与 “换货几天” 向量很近但答案不同</td>
+<td>阈值分档 + 关键槽位（实体、时间）精确校验</td>
+</tr>
+<tr>
+<td>时效性</td>
+<td>价格、库存、政策变化</td>
+<td>按内容类型设 TTL；写数据时主动失效</td>
+</tr>
+<tr>
+<td>越权串租</td>
+<td>A 租户问题命中 B 租户答案</td>
+<td>key 必含 tenant/ACL 哈希</td>
+</tr>
+<tr>
+<td>缓存投毒</td>
+<td>一次错误答案被缓存放大</td>
+<td>只缓存有依据的回答；抽检 + 快速下线</td>
+</tr>
+<tr>
+<td>反馈污染</td>
+<td>用户骂”答错了”但缓存还在</td>
+<td>负反馈触发失效与告警</td>
+</tr>
+</tbody></table>
+<p>适用面：<strong>只读、幂等、高频重复</strong>（FAQ、术语解释、状态查询）；推理型、个性化型任务别上。</p>
+<h3 id="3-5-别只盯着模型调用：链路上其他可缓存点"><a href="#3-5-别只盯着模型调用：链路上其他可缓存点" class="headerlink" title="3.5 别只盯着模型调用：链路上其他可缓存点"></a>3.5 别只盯着模型调用：链路上其他可缓存点</h3><table>
+<thead>
+<tr>
+<th>缓存对象</th>
+<th>收益</th>
+<th>注意</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Embedding</td>
+<td>同一 chunk 不重复嵌入（重嵌入很贵）</td>
+<td>按模型版本 + chunk 策略作 key</td>
+</tr>
+<tr>
+<td>RAG 检索结果（query → chunks）</td>
+<td>省检索与重排算力</td>
+<td>权限过滤必须在缓存之后仍生效</td>
+</tr>
+<tr>
+<td>工具 / 外部 API 结果</td>
+<td>直接省调用费</td>
+<td>幂等接口才可缓存，注意 TTL</td>
+</tr>
+<tr>
+<td>会话摘要</td>
+<td>避免每轮重算全量历史</td>
+<td>增量摘要，别频繁重写早期消息</td>
+</tr>
+<tr>
+<td>短回答（FAQ）</td>
+<td>零模型调用</td>
+<td>见 3.4 风险</td>
+</tr>
+</tbody></table>
+<h3 id="3-6-Agent-场景的省钱要点"><a href="#3-6-Agent-场景的省钱要点" class="headerlink" title="3.6 Agent 场景的省钱要点"></a>3.6 Agent 场景的省钱要点</h3><ol>
+<li><strong>只追加历史</strong>，别在每轮重写系统提示（否则前缀缓存全废）；</li>
+<li><strong>工具结果进上下文前先裁剪</strong>（见第 4 节），这是 Agent 最大的 token 浪费源；</li>
+<li><strong>并行独立工具调用</strong>，减少轮次 = 减少历史重复发送；</li>
+<li><strong>早停与 max_iterations</strong>，防止无效循环把成本推到几十倍；</li>
+<li>子任务结果落盘复用，而不是重新推理一遍。</li>
+</ol>
+<h3 id="3-7-打点必须区分字段"><a href="#3-7-打点必须区分字段" class="headerlink" title="3.7 打点必须区分字段"></a>3.7 打点必须区分字段</h3><p>供应商返回里 <code>cached_input_tokens</code>、<code>cache_write_input_tokens</code>、<code>reasoning_output_tokens</code> 是不同字段。<strong>只统计总 token 的看板，会让你以为命中率 80% 实际 0%</strong>。</p>
+<h2 id="04-上下文压缩：少发-token，但不少给信息"><a href="#04-上下文压缩：少发-token，但不少给信息" class="headerlink" title="04 上下文压缩：少发 token，但不少给信息"></a>04 上下文压缩：少发 token，但不少给信息</h2><h3 id="4-1-先做预算表，再谈压缩"><a href="#4-1-先做预算表，再谈压缩" class="headerlink" title="4.1 先做预算表，再谈压缩"></a>4.1 先做预算表，再谈压缩</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">一次问答的上下文预算（上限 8k）</span><br><span class="line">  system 指令        500   ┐</span><br><span class="line">  工具定义           400   │ 稳定层（尽量不动，利于缓存）</span><br><span class="line">  few-shot           800   ┘</span><br><span class="line">  会话历史          2000   = 滚动摘要 600 + 最近 6 轮原文 1400</span><br><span class="line">  RAG 片段          3000   = top 5 × 600</span><br><span class="line">  本轮用户输入       200</span><br><span class="line">  预留输出          1100</span><br></pre></td></tr></table></figure></div>
+
+<p>超预算时的<strong>裁剪优先级</strong>（写进配置，别让工程师现场拍脑袋）：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">先砍 RAG 数量 → 再砍 few-shot 个数 → 再压缩历史（提高摘要比例）</span><br><span class="line">→ 最后砍可选说明；硬约束、安全规则、输出 schema 永不砍</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="4-2-结构化裁剪：零模型成本，收益最大"><a href="#4-2-结构化裁剪：零模型成本，收益最大" class="headerlink" title="4.2 结构化裁剪：零模型成本，收益最大"></a>4.2 结构化裁剪：零模型成本，收益最大</h3><table>
+<thead>
+<tr>
+<th>手段</th>
+<th>例子</th>
+<th>收益</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>工具结果字段白名单</td>
+<td>API 返回 40 字段，只留 6 个</td>
+<td>常见 −60%~−90% 工具 token</td>
+</tr>
+<tr>
+<td>截断 + 分页</td>
+<td><code>limit=50</code>、<code>max_chars=1500</code>，超长给”取更多”的工具</td>
+<td>防止单次调用炸上下文</td>
+</tr>
+<tr>
+<td>去重合并</td>
+<td>同文档相邻 chunk 合并</td>
+<td>−10%~−30% 检索 token</td>
+</tr>
+<tr>
+<td>只给 ID 不给正文</td>
+<td>模型返回订单号，前端自己渲染</td>
+<td>输出 token 大幅下降</td>
+</tr>
+<tr>
+<td>结构化格式</td>
+<td>表格/CSV/JSON 比自然语言更省字</td>
+<td>−30% 左右</td>
+</tr>
+<tr>
+<td>文档预处理</td>
+<td>OCR/解析后只留正文，去掉页眉页脚、HTML 标签</td>
+<td>检索与输入同时降</td>
+</tr>
+<tr>
+<td>别塞 base64</td>
+<td>图片转文字/摘要，或用视觉模型直传</td>
+<td>避免离谱的 token 消耗</td>
+</tr>
+</tbody></table>
+<h3 id="4-3-摘要与滚动记忆"><a href="#4-3-摘要与滚动记忆" class="headerlink" title="4.3 摘要与滚动记忆"></a>4.3 摘要与滚动记忆</h3><div class="code-container" data-rel="Json"><figure class="iseeu highlight json"><table><tr><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;user_goal&quot;</span><span class="punctuation">:</span> <span class="string">&quot;查询订单 A1001 的退款进度&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;confirmed_facts&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">&quot;订单已发货&quot;</span><span class="punctuation">,</span> <span class="string">&quot;用户已提交退款申请 2026-11-01&quot;</span><span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;constraints&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">&quot;不接受换货方案&quot;</span><span class="punctuation">,</span> <span class="string">&quot;必须给到具体到账时间&quot;</span><span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;open_questions&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">&quot;是否需要开发票&quot;</span><span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;decisions&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="string">&quot;已确认走原路退款&quot;</span><span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;ids&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span><span class="attr">&quot;order_id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;A1001&quot;</span><span class="punctuation">,</span> <span class="attr">&quot;ticket_id&quot;</span><span class="punctuation">:</span> <span class="string">&quot;T-77&quot;</span><span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure></div>
+
+<p>三条原则：</p>
+<ol>
+<li><strong>结构化摘要 &gt; 散文摘要</strong>：数字、ID、硬约束、承诺必须逐项保留，散文最容易把”不超过 3 天”写成”尽快”；</li>
+<li><strong>增量摘要</strong>：旧摘要 + 新增轮次 → 新摘要，别每轮重算全量历史；</li>
+<li><strong>只在历史超阈值时触发</strong>：短会话压缩省的 token 抵不上摘要调用的成本。</li>
+</ol>
+<p>失效模式：早期约束被摘要掉 → 模型反复给已被拒绝的方案。<strong>缓解</strong>：把”不可协商约束”单独拎出来放进稳定层（每轮固定发送，且能命中缓存），普通对话才走摘要。</p>
+<h3 id="4-4-检索侧压缩（RAG-最容易省）"><a href="#4-4-检索侧压缩（RAG-最容易省）" class="headerlink" title="4.4 检索侧压缩（RAG 最容易省）"></a>4.4 检索侧压缩（RAG 最容易省）</h3><ul>
+<li><strong>top-k 收紧</strong>：塞 20 段远不如 rerank 后给 3~5 段，多数场景准确率反而更高（噪声少了）；</li>
+<li><strong>抽取式压缩</strong>：只保留命中问题的句子；</li>
+<li><strong>父子文档</strong>：小块命中、传相关段落而不是整篇长文；</li>
+<li><strong>多样性去冗</strong>：MMR 或按文档去重，避免五段几乎一样的内容；</li>
+<li><strong>不要传全文给模型再问”哪段相关”</strong>：这是最贵的写法。</li>
+</ul>
+<h3 id="4-5-Prompt-本体瘦身"><a href="#4-5-Prompt-本体瘦身" class="headerlink" title="4.5 Prompt 本体瘦身"></a>4.5 Prompt 本体瘦身</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">啰嗦版（约 260 token）</span><br><span class="line">你是一位拥有 15 年经验的资深前端架构师，曾就职于多家顶级互联网公司……</span><br><span class="line">请认真思考后回答，务必专业、细致、周到，如果有不清楚的地方请及时询问用户……</span><br><span class="line"></span><br><span class="line">精简版（约 60 token）</span><br><span class="line">角色：前端架构师。</span><br><span class="line">任务：给出可落地的方案与关键代码。</span><br><span class="line">约束：不确定时先问一个澄清问题；不要复述问题。</span><br><span class="line">输出：Markdown，分点，不超过 300 字。</span><br></pre></td></tr></table></figure></div>
+
+<p>要点：<strong>形容词不改变行为，约束和输出契约才改变行为</strong>。few-shot 示例是最贵的 token——从 5 个减到 2 个往往只掉 1~2 个点准确率，但省 40%+ 前缀；减与不减，用评测集说话。</p>
+<h3 id="4-6-输出侧压缩"><a href="#4-6-输出侧压缩" class="headerlink" title="4.6 输出侧压缩"></a>4.6 输出侧压缩</h3><table>
+<thead>
+<tr>
+<th>手段</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>max_tokens</code></td>
+<td>按历史 P95 输出长度设上限，别留无限空间</td>
+</tr>
+<tr>
+<td>结构化返回</td>
+<td>JSON schema，字段替代自然语言长段落</td>
+</tr>
+<tr>
+<td>禁止复述</td>
+<td>明确”不要重复用户问题，直接给结论”</td>
+</tr>
+<tr>
+<td>简洁档位</td>
+<td>同一能力用 <code>style: concise/detail</code> 双档，默认简洁</td>
+</tr>
+<tr>
+<td>不生成不需要的字段</td>
+<td>摘要+解释+建议三件套，多数场景只要摘要</td>
+</tr>
+</tbody></table>
+<h3 id="4-7-“上下文窗口又大又便宜，还要压缩吗”"><a href="#4-7-“上下文窗口又大又便宜，还要压缩吗”" class="headerlink" title="4.7 “上下文窗口又大又便宜，还要压缩吗”"></a>4.7 “上下文窗口又大又便宜，还要压缩吗”</h3><p>要，原因不是钱：</p>
+<ol>
+<li><strong>延迟</strong>：长输入意味着 prefill 计算量随长度显著上升，P95 会被拉长；</li>
+<li><strong>有效注意力</strong>：长上下文里”中间信息丢失”，塞 200 段不会让模型更准，只会更慢更贵；</li>
+<li><strong>成本仍然随 token 线性</strong>：单价低不等于免费；</li>
+<li><strong>缓存与内存</strong>：长会话的 KV 复用效率更差。</li>
+</ol>
+<p>结论：<strong>便宜 ≠ 免费 ≠ 有效</strong>。压缩既是成本手段，也是质量手段。</p>
+<h3 id="4-8-怎么确认压缩没掉质量"><a href="#4-8-怎么确认压缩没掉质量" class="headerlink" title="4.8 怎么确认压缩没掉质量"></a>4.8 怎么确认压缩没掉质量</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">成对指标：token/请求 ↓   vs   recall@k / 答案正确率 / 拒答率 / 人工转接率</span><br><span class="line">信息保留率 = 压缩后仍能答对的关键点数 / 标注关键点总数</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li>每次改压缩策略都跑固定回归集（≥200 条），并记录”最坏案例”而不是只看均值；</li>
+<li>高风险链路保留<strong>直通通道</strong>：金额、法务、事故处理走”不压缩 + 大模型 + 人工复核”。</li>
+</ul>
+<h2 id="05-其它高-ROI-手段"><a href="#05-其它高-ROI-手段" class="headerlink" title="05 其它高 ROI 手段"></a>05 其它高 ROI 手段</h2><table>
+<thead>
+<tr>
+<th>手段</th>
+<th>说明</th>
+<th>注意</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Batch API</td>
+<td>离线任务批量提交，常见约五折</td>
+<td>非实时，要处理部分失败与对账</td>
+</tr>
+<tr>
+<td>蒸馏 / 微调小模型</td>
+<td>高频固定任务长期降本 + 降延迟</td>
+<td>需要数据、评测和维护成本</td>
+</tr>
+<tr>
+<td>传统算法前置</td>
+<td>分类用向量/BM25/正则，抽取用规则 + schema</td>
+<td>能用确定性方案就别问模型</td>
+</tr>
+<tr>
+<td>LLM-as-Judge 抽样</td>
+<td>全量评审成本极高，改成 5%~10% 抽检</td>
+<td>与人工标注校准一致性</td>
+</tr>
+<tr>
+<td>预算护栏</td>
+<td>per-tenant / per-user 预算、单请求 token 上限、异常熔断</td>
+<td>防止循环调用把账单打爆</td>
+</tr>
+<tr>
+<td>重试策略</td>
+<td>只在格式错误时重试，最多 1~2 次 + 指数退避</td>
+<td>5xx/限流不等于可盲目重试</td>
+</tr>
+<tr>
+<td>多供应商同能力</td>
+<td>价格、限流、故障切换</td>
+<td>前缀缓存不跨供应商共享</td>
+</tr>
+<tr>
+<td>流式输出</td>
+<td>不影响账单，改善感知延迟</td>
+<td>别为了流式重复请求一次</td>
+</tr>
+</tbody></table>
+<h2 id="06-组合案例：客服问答的成本从-0-0156-→-0-0042"><a href="#06-组合案例：客服问答的成本从-0-0156-→-0-0042" class="headerlink" title="06 组合案例：客服问答的成本从 $0.0156 → $0.0042"></a>06 组合案例：客服问答的成本从 $0.0156 → $0.0042</h2><table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>动作</th>
+<th>账单影响</th>
+<th>质量影响</th>
+<th>验证方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0 归因</td>
+<td>建 <code>llm_call_log</code>，按 feature 拆成本</td>
+<td>—</td>
+<td>—</td>
+<td>发现 60% 输入是固定前缀且 0 命中</td>
+</tr>
+<tr>
+<td>1 前缀重排</td>
+<td>时间戳/请求 ID 移出 system，工具定义排序固定</td>
+<td>−42%</td>
+<td>无</td>
+<td>缓存读 token 从 0 → 72%</td>
+</tr>
+<tr>
+<td>2 模型路由</td>
+<td>意图与抽取走小模型，投诉走大模型</td>
+<td>−35%</td>
+<td>−0.4pt（可接受）</td>
+<td>分任务回归 + 5% 灰度</td>
+</tr>
+<tr>
+<td>3 RAG 收紧</td>
+<td>top20 → top5 + rerank</td>
+<td>−28% 输入</td>
+<td><strong>+1.8pt</strong></td>
+<td>同评测集前后对比</td>
+</tr>
+<tr>
+<td>4 历史压缩</td>
+<td>超过 6 轮转结构化滚动摘要，硬约束常驻稳定层</td>
+<td>长会话输入 −45%</td>
+<td>持平</td>
+<td>关键点回归（数字/ID 保留率）</td>
+</tr>
+<tr>
+<td>5 语义缓存</td>
+<td>FAQ 类只读问题缓存，含 tenant/ACL key</td>
+<td>22% 请求零调用</td>
+<td>抽检一致</td>
+<td>命中答案抽检 + 负反馈失效</td>
+</tr>
+<tr>
+<td>6 输出契约</td>
+<td>JSON schema + max_tokens + 禁止复述</td>
+<td>输出 −18%</td>
+<td>格式合规率 ↑</td>
+<td>合规率与截断率监控</td>
+</tr>
+</tbody></table>
+<p>结果：单次会话成本 −73%，P95 延迟 2.4s → 1.1s，答案正确率 87.2% → 88.1%（示例数字）。</p>
+<p><strong>顺序很关键</strong>：先重排前缀（几乎零风险），再收紧检索（通常还能涨质量），最后才动路由（质量风险最高）。</p>
+<h2 id="07-落地节奏与验收"><a href="#07-落地节奏与验收" class="headerlink" title="07 落地节奏与验收"></a>07 落地节奏与验收</h2><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>内容</th>
+<th>产出</th>
+<th>回滚</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0 归因（约 1 周）</td>
+<td>调用日志、成本看板、评测集</td>
+<td>成本分布 + 基线指标</td>
+<td>—</td>
+</tr>
+<tr>
+<td>1 缓存布局（约 1 周）</td>
+<td>前缀重排、命中率打点</td>
+<td>命中率与节省曲线</td>
+<td>布局可配置回退</td>
+</tr>
+<tr>
+<td>2 路由（约 2 周）</td>
+<td>静态规则 + 级联，灰度放量</td>
+<td>分任务回归报告</td>
+<td>一键切回大模型</td>
+</tr>
+<tr>
+<td>3 压缩（约 2 周）</td>
+<td>RAG top-k、结构化摘要、输出契约</td>
+<td>token/质量对照表</td>
+<td>直通通道保留</td>
+</tr>
+<tr>
+<td>4 结构优化</td>
+<td>语义缓存、批处理、蒸馏小模型</td>
+<td>长期成本基线</td>
+<td>逐 feature 灰度</td>
+</tr>
+</tbody></table>
+<p><strong>验收标准（三条同时满足才算优化成功）</strong>：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">每千次请求成本 ↓ ≥ 30%（按 feature 分别看）</span><br><span class="line">答案质量指标不下降（评测集 + 线上抽检）</span><br><span class="line">P95 延迟不上升（成本常靠少发 token 换来延迟下降，反向恶化要警惕）</span><br></pre></td></tr></table></figure></div>
+
+<h2 id="08-高频面试题"><a href="#08-高频面试题" class="headerlink" title="08 高频面试题"></a>08 高频面试题</h2><p><strong>Q1：如何系统性地降低大模型应用成本？</strong><br>A：先归因（调用日志拆到 feature 级，区分输入/输出/推理/缓存 token），再按三个因子下手：模型路由降单价、缓存降重复成本、上下文压缩降 token 数；配套手段是减少轮次、批处理、蒸馏小模型。顺序上先做零风险的前缀重排和检索收紧，最后才动路由，每步都用评测集和灰度验证。</p>
+<p><strong>Q2：提示词缓存为什么没命中？</strong><br>A：最常见是前缀不稳定——把时间戳/请求 ID 写进 system、工具或 JSON 字段顺序抖动、few-shot 动态洗牌、改写早期历史、把租户差异混进公共前缀、换模型或 prompt 版本没对齐。另外前缀长度不足门槛或超出 TTL 也不会命中。</p>
+<p><strong>Q3：模型路由会不会伤质量？怎么保证？</strong><br>A：会，所以要做三件事：分任务回归（不用总体平均分）、给两类错分定价（简单判难是浪费钱，难判简单是事故）、灰度加一键回退。高风险任务直接固定大模型不路由，同时保留级联兜底：小模型低置信或校验失败就升级。</p>
+<p><strong>Q4：语义缓存的风险和 key 怎么设计？</strong><br>A：风险是错误命中、时效、越权和缓存投毒。key 必须包含租户与权限范围哈希、prompt 版本、模型 ID，并按内容类型设 TTL；写入时校验有依据，负反馈触发失效。只对只读幂等的高频重复问题开。</p>
+<p><strong>Q5：上下文压缩会不会丢关键信息？</strong><br>A：会，所以用结构化摘要（目标、事实、约束、待办、ID 分字段）而不是散文摘要，并把不可协商的硬约束放在每轮固定发送的稳定层。每次改压缩都跑固定回归集，看关键点保留率，而不是只看平均分。</p>
+<p><strong>Q6：输出比输入贵，怎么压输出？</strong><br>A：<code>max_tokens</code> 按 P95 设限、JSON schema 代替长段落、明确禁止复述问题、只返回渲染需要的字段（ID 而非全文）、默认简洁档。同时注意推理型模型的思考 token 也按输出计费，要单列监控。</p>
+<p><strong>Q7：Agent 成本失控一般是什么原因？</strong><br>A：工具结果原样塞回上下文、轮次无上限、每轮重写系统提示导致缓存全废、重试风暴。解法：工具输出裁剪白名单、<code>max_iterations</code> 与早停、并行独立工具调用减少轮次、前缀冻结、重试只针对格式失败且限次。</p>
+<p><strong>Q8：长上下文很便宜了，还需要 RAG 和压缩吗？</strong><br>A：需要。便宜不等于免费，也不等于有效：长输入 prefill 延迟上升，且”中间信息丢失”让塞更多文档不一定更准；RAG 还解决权限过滤与来源可溯。正确做法是检索精排给 3~5 段，长上下文用于少量整篇分析类任务。</p>
+<p><strong>Q9：怎么控推理 token？</strong><br>A：任务分级（能不走思考模型就不走）、限制思考预算（若供应商支持）、拆分步骤避免一次复杂推理膨胀、把确定性逻辑交给代码而不是模型、监控思考 token/输出 token 比值作为路由信号。</p>
+<p><strong>Q10：缓存 TTL 怎么定？</strong><br>A：按内容变化频率而不是拍脑袋：静态知识小时级甚至不失效，库存价格秒级或干脆不缓存，FAQ 分钟到小时级；配合”数据写入即失效”的事件驱动，比单纯缩短 TTL 更省。同时要盯 TTL 与提示词缓存续期机制的关系，间隔太长命中率会掉。</p>
+<p><strong>Q11：成本、延迟、质量能同时优化吗？</strong><br>A：常能，因为它们大多来自同一个源头——多余的 token。前缀重排、检索收紧、工具结果裁剪、减少轮次，通常三者一起改善；冲突点是”用更贵的模型换更高准确率”和”语义缓存省成本但可能陈旧”，这些要用评测集和 SLA 明确取舍。</p>
+<p><strong>Q12：你怎么证明优化真的有效？</strong><br>A：四件套：固定评测集离线前后对比、灰度 A/B 看线上业务指标（转人工率、投诉率、任务成功率）、成本看板看 token 结构（输入/输出/推理/缓存读）而不是只总额、以及 P95 延迟与错误率不劣化。任何只看”账单变小”的结论都不算数。</p>
+<h2 id="09-一页纸速查"><a href="#09-一页纸速查" class="headerlink" title="09 一页纸速查"></a>09 一页纸速查</h2><table>
+<thead>
+<tr>
+<th>关键词</th>
+<th>一句话</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>成本公式</td>
+<td>Token 数 × 单价 × 调用次数，三个因子三招</td>
+</tr>
+<tr>
+<td>归因先行</td>
+<td>分 feature 记输入/输出/推理/缓存四类 token</td>
+</tr>
+<tr>
+<td>多轮成本</td>
+<td>历史每轮重发，累计输入约 O(n²)</td>
+</tr>
+<tr>
+<td>输出更贵</td>
+<td>输出单价常见为输入的 3~5 倍</td>
+</tr>
+<tr>
+<td>推理 token</td>
+<td>按输出计费，必须单列监控</td>
+</tr>
+<tr>
+<td>提示词缓存</td>
+<td>前缀逐 token 一致才命中，有长度门槛与分钟级 TTL</td>
+</tr>
+<tr>
+<td>前缀布局</td>
+<td>稳定层（system/工具/示例）→ 历史（只追加）→ 本轮输入</td>
+</tr>
+<tr>
+<td>命中率杀手</td>
+<td>时间戳进 system、字段顺序抖、示例洗牌、改写历史</td>
+</tr>
+<tr>
+<td>语义缓存</td>
+<td>key 含 tenant/ACL/模型/prompt 版本，TTL 按内容时效</td>
+</tr>
+<tr>
+<td>模型路由</td>
+<td>静态规则打底 + 级联兜底，高风险不省</td>
+</tr>
+<tr>
+<td>路由守护</td>
+<td>分任务回归、错分定价、灰度、一键回退</td>
+</tr>
+<tr>
+<td>上下文预算</td>
+<td>写死裁剪优先级：RAG → few-shot → 历史，硬约束不砍</td>
+</tr>
+<tr>
+<td>结构化裁剪</td>
+<td>工具结果白名单、截断分页、去重、别塞 base64</td>
+</tr>
+<tr>
+<td>结构化摘要</td>
+<td>目标/事实/约束/待办/ID 分字段，硬约束常驻稳定层</td>
+</tr>
+<tr>
+<td>输出压缩</td>
+<td>max_tokens + schema + 禁止复述 + 只给 ID</td>
+</tr>
+<tr>
+<td>Batch API</td>
+<td>离线任务常见约五折</td>
+</tr>
+<tr>
+<td>蒸馏小模型</td>
+<td>高频固定任务的长期降本方案</td>
+</tr>
+<tr>
+<td>验收三条件</td>
+<td>成本降、质量不降、延迟不升</td>
+</tr>
+</tbody></table>
+<h2 id="10-60-秒面试话术"><a href="#10-60-秒面试话术" class="headerlink" title="10 60 秒面试话术"></a>10 60 秒面试话术</h2><p><strong>问题</strong>：”你们的 AI 功能成本太高，你会怎么优化？”</p>
+<p><strong>参考回答</strong>：</p>
+<blockquote>
+<p>我先把成本拆开，而不是直接换模型。第一步建调用归因表，按业务功能记录输入、输出、推理和缓存读取四类 token，因为多轮会话每轮重发历史，累计输入接近平方级增长，很多团队的钱其实浪费在这里。第二步做提示词缓存：把 system、工具定义、固定示例和长期知识放在稳定层并按固定顺序序列化，会话历史只追加，时间戳和请求 ID 挪到最后，这一步几乎零风险，我们那次命中率从 0 提到 70% 多，输入侧成本降了四成。第三步压上下文：RAG 从 top20 收紧成 rerank 后取 3~5 段，工具结果做字段白名单和分页，长会话用结构化滚动摘要并把硬约束常驻稳定层，输出侧用 schema 加 max_tokens 禁止复述——这三步通常成本降了质量还略升，因为噪声少了。第四步才是模型路由：静态规则加级联兜底，简单抽取走小模型，涉钱和对外内容固定大模型加人工，灰度放量并用分任务回归证明质量不掉，配置化一键回退。最后对高频重复的只读问题做语义缓存（key 含租户和权限哈希）、离线任务走批处理、稳定任务再考虑蒸馏小模型。验收标准是三条同时满足：每千次成本下降、质量指标不降、P95 延迟不升。</p>
+</blockquote>
+<hr>
+<p><strong>最后记住三句话：</strong></p>
+<ol>
+<li><strong>优化顺序是”布局 → 裁剪 → 路由 → 缓存结果”</strong>：风险从低到高，收益从确定到需要权衡，反过来做多半要回滚。</li>
+<li><strong>省钱的本质是少发 token，而少发 token 通常同时降延迟、升质量</strong>：真正需要取舍的是”更便宜的模型”和”可能陈旧的缓存”。</li>
+<li><strong>没有归因表和回归集的降本都是玄学</strong>：账单下降不等于成功，”成本降、质量不降、延迟不升”三条同时成立才算数。</li>
+</ol>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day22：AI应用成本优化：模型路由、缓存命中与上下文压缩</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-11-02 17:20:27</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-11-02 17:20:27
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/11/02/复习知识点Day22-AI应用成本优化：模型路由、缓存命中与上下文压缩/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
+</div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%9D%A2%E8%AF%95/">#面试</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/AI/">#AI</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">#复习知识点</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E6%88%90%E6%9C%AC%E4%BC%98%E5%8C%96/">#成本优化</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E6%A8%A1%E5%9E%8B%E8%B7%AF%E7%94%B1/">#模型路由</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E6%8F%90%E7%A4%BA%E8%AF%8D%E7%BC%93%E5%AD%98/">#提示词缓存</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E4%B8%8A%E4%B8%8B%E6%96%87%E5%8E%8B%E7%BC%A9/">#上下文压缩</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/10/26/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day21-pgvector%E5%90%91%E9%87%8F%E6%A3%80%E7%B4%A2%E8%90%BD%E5%9C%B0%E4%B8%8EEmbedding%E9%80%89%E5%9E%8B%E5%AF%B9%E6%AF%94/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day21：pgvector向量检索落地与Embedding选型对比</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
+	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day22：AI应用成本优化：模型路由、缓存命中与上下文压缩</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%88%E8%AF%B4%E7%BB%93%E8%AE%BA"><span class="nav-text">先说结论</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#01-%E5%85%88%E7%AE%97%E6%B8%85%E9%92%B1%E8%8A%B1%E5%9C%A8%E5%93%AA%EF%BC%9A%E6%88%90%E6%9C%AC%E5%BD%92%E5%9B%A0"><span class="nav-text">01 先算清钱花在哪：成本归因</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%9B%9B%E7%B1%BB%E8%A6%81%E8%AE%A1%E8%B4%B9%E7%9A%84-token"><span class="nav-text">1.1 四类要计费的 token</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E8%B0%83%E7%94%A8%E6%AC%A1%E6%95%B0%E6%98%AF%E6%80%8E%E4%B9%88%E6%94%BE%E5%A4%A7%E7%9A%84"><span class="nav-text">1.2 调用次数是怎么放大的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E5%BD%92%E5%9B%A0%E8%A1%A8%EF%BC%88%E6%B2%A1%E6%9C%89%E8%BF%99%E4%B8%AA%E5%B0%B1%E6%B2%A1%E6%B3%95%E4%BC%98%E5%8C%96%EF%BC%89"><span class="nav-text">1.3 归因表（没有这个就没法优化）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E4%B8%80%E7%AC%94%E7%A4%BA%E4%BE%8B%E8%B4%A6%EF%BC%88%E6%95%B0%E5%AD%97%E4%B8%BA%E5%81%87%E8%AE%BE%EF%BC%8C%E7%94%A8%E4%BA%8E%E8%AF%B4%E6%98%8E%E7%AE%97%E6%B3%95%EF%BC%89"><span class="nav-text">1.4 一笔示例账（数字为假设，用于说明算法）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#02-%E6%A8%A1%E5%9E%8B%E8%B7%AF%E7%94%B1%EF%BC%9A%E9%80%81%E5%88%B0%E2%80%9D%E5%A4%9F%E7%94%A8%E4%B8%94%E6%9C%80%E4%BE%BF%E5%AE%9C%E2%80%9D%E7%9A%84%E9%82%A3%E4%B8%80%E6%A1%A3"><span class="nav-text">02 模型路由：送到”够用且最便宜”的那一档</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E4%B8%89%E7%A7%8D%E8%B7%AF%E7%94%B1%E5%BD%A2%E6%80%81"><span class="nav-text">2.1 三种路由形态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E4%B8%83%E4%B8%AA%E8%B7%AF%E7%94%B1%E4%BF%A1%E5%8F%B7"><span class="nav-text">2.2 七个路由信号</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E4%BB%A3%E7%A0%81%E9%AA%A8%E6%9E%B6"><span class="nav-text">2.3 代码骨架</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E8%B7%AF%E7%94%B1%E5%99%A8%E6%9C%AC%E8%BA%AB%E4%B8%8D%E8%83%BD%E8%B4%B5"><span class="nav-text">2.4 路由器本身不能贵</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-%E6%80%8E%E4%B9%88%E8%AF%81%E6%98%8E%E8%B7%AF%E7%94%B1%E6%B2%A1%E4%BC%A4%E8%B4%A8%E9%87%8F"><span class="nav-text">2.5 怎么证明路由没伤质量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-6-%E5%9D%91"><span class="nav-text">2.6 坑</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#03-%E7%BC%93%E5%AD%98%E5%91%BD%E4%B8%AD%EF%BC%9A%E9%87%8D%E5%A4%8D%E7%9A%84-token-%E5%8F%AA%E4%BB%98%E4%B8%80%E6%AC%A1%E9%92%B1"><span class="nav-text">03 缓存命中：重复的 token 只付一次钱</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E6%8F%90%E7%A4%BA%E8%AF%8D%E7%BC%93%E5%AD%98%E7%9A%84%E6%9C%BA%E5%88%B6"><span class="nav-text">3.1 提示词缓存的机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%B8%83%E5%B1%80%E5%86%B3%E5%AE%9A%E5%91%BD%E4%B8%AD%E7%8E%87%EF%BC%88%E6%9C%80%E5%AE%B9%E6%98%93%E8%B8%A9%E7%9A%84%E4%B8%80%E8%8A%82%EF%BC%89"><span class="nav-text">3.2 布局决定命中率（最容易踩的一节）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%91%BD%E4%B8%AD%E7%8E%87%E6%80%8E%E4%B9%88%E7%AE%97%E3%80%81%E7%9B%AE%E6%A0%87%E5%AE%9A%E5%A4%9A%E5%B0%91"><span class="nav-text">3.3 命中率怎么算、目标定多少</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E8%AF%AD%E4%B9%89%E7%BC%93%E5%AD%98%EF%BC%9A%E6%95%B4%E6%AC%A1%E8%B0%83%E7%94%A8%E9%83%BD%E4%B8%8D%E7%94%A8%E5%8F%91"><span class="nav-text">3.4 语义缓存：整次调用都不用发</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E5%88%AB%E5%8F%AA%E7%9B%AF%E7%9D%80%E6%A8%A1%E5%9E%8B%E8%B0%83%E7%94%A8%EF%BC%9A%E9%93%BE%E8%B7%AF%E4%B8%8A%E5%85%B6%E4%BB%96%E5%8F%AF%E7%BC%93%E5%AD%98%E7%82%B9"><span class="nav-text">3.5 别只盯着模型调用：链路上其他可缓存点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-6-Agent-%E5%9C%BA%E6%99%AF%E7%9A%84%E7%9C%81%E9%92%B1%E8%A6%81%E7%82%B9"><span class="nav-text">3.6 Agent 场景的省钱要点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-7-%E6%89%93%E7%82%B9%E5%BF%85%E9%A1%BB%E5%8C%BA%E5%88%86%E5%AD%97%E6%AE%B5"><span class="nav-text">3.7 打点必须区分字段</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#04-%E4%B8%8A%E4%B8%8B%E6%96%87%E5%8E%8B%E7%BC%A9%EF%BC%9A%E5%B0%91%E5%8F%91-token%EF%BC%8C%E4%BD%86%E4%B8%8D%E5%B0%91%E7%BB%99%E4%BF%A1%E6%81%AF"><span class="nav-text">04 上下文压缩：少发 token，但不少给信息</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E5%85%88%E5%81%9A%E9%A2%84%E7%AE%97%E8%A1%A8%EF%BC%8C%E5%86%8D%E8%B0%88%E5%8E%8B%E7%BC%A9"><span class="nav-text">4.1 先做预算表，再谈压缩</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E7%BB%93%E6%9E%84%E5%8C%96%E8%A3%81%E5%89%AA%EF%BC%9A%E9%9B%B6%E6%A8%A1%E5%9E%8B%E6%88%90%E6%9C%AC%EF%BC%8C%E6%94%B6%E7%9B%8A%E6%9C%80%E5%A4%A7"><span class="nav-text">4.2 结构化裁剪：零模型成本，收益最大</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E6%91%98%E8%A6%81%E4%B8%8E%E6%BB%9A%E5%8A%A8%E8%AE%B0%E5%BF%86"><span class="nav-text">4.3 摘要与滚动记忆</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E6%A3%80%E7%B4%A2%E4%BE%A7%E5%8E%8B%E7%BC%A9%EF%BC%88RAG-%E6%9C%80%E5%AE%B9%E6%98%93%E7%9C%81%EF%BC%89"><span class="nav-text">4.4 检索侧压缩（RAG 最容易省）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-Prompt-%E6%9C%AC%E4%BD%93%E7%98%A6%E8%BA%AB"><span class="nav-text">4.5 Prompt 本体瘦身</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-6-%E8%BE%93%E5%87%BA%E4%BE%A7%E5%8E%8B%E7%BC%A9"><span class="nav-text">4.6 输出侧压缩</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-7-%E2%80%9C%E4%B8%8A%E4%B8%8B%E6%96%87%E7%AA%97%E5%8F%A3%E5%8F%88%E5%A4%A7%E5%8F%88%E4%BE%BF%E5%AE%9C%EF%BC%8C%E8%BF%98%E8%A6%81%E5%8E%8B%E7%BC%A9%E5%90%97%E2%80%9D"><span class="nav-text">4.7 “上下文窗口又大又便宜，还要压缩吗”</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-8-%E6%80%8E%E4%B9%88%E7%A1%AE%E8%AE%A4%E5%8E%8B%E7%BC%A9%E6%B2%A1%E6%8E%89%E8%B4%A8%E9%87%8F"><span class="nav-text">4.8 怎么确认压缩没掉质量</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#05-%E5%85%B6%E5%AE%83%E9%AB%98-ROI-%E6%89%8B%E6%AE%B5"><span class="nav-text">05 其它高 ROI 手段</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#06-%E7%BB%84%E5%90%88%E6%A1%88%E4%BE%8B%EF%BC%9A%E5%AE%A2%E6%9C%8D%E9%97%AE%E7%AD%94%E7%9A%84%E6%88%90%E6%9C%AC%E4%BB%8E-0-0156-%E2%86%92-0-0042"><span class="nav-text">06 组合案例：客服问答的成本从 $0.0156 → $0.0042</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#07-%E8%90%BD%E5%9C%B0%E8%8A%82%E5%A5%8F%E4%B8%8E%E9%AA%8C%E6%94%B6"><span class="nav-text">07 落地节奏与验收</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#08-%E9%AB%98%E9%A2%91%E9%9D%A2%E8%AF%95%E9%A2%98"><span class="nav-text">08 高频面试题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#09-%E4%B8%80%E9%A1%B5%E7%BA%B8%E9%80%9F%E6%9F%A5"><span class="nav-text">09 一页纸速查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-60-%E7%A7%92%E9%9D%A2%E8%AF%95%E8%AF%9D%E6%9C%AF"><span class="nav-text">10 60 秒面试话术</span></a></li></ol>
+
+	</div>
+</div>
+	</div>
+	
+</div>
+
+			</div>
+
+			
+		</div>
+
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2017</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">Percy jie</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 34 篇文章
+                    </span>
+                    
+                        <span>
+                            共 119k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
+
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
+	
+
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>

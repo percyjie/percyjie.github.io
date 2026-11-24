@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="AI, Java, Security, Blog">
+    
+    
+    <meta name="author" content="Percy jie">
+    
+    <!-- Completely eliminate flash of wrong theme -->
+    <script>
+        (function() {
+            const THEME_KEY = "REDEFINE-THEME-STATUS";
+            const DARK = "dark", LIGHT = "light";
+            
+            // Get preferred theme
+            function getTheme() {
+                try {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    if (saved) {
+                        const { isDark } = JSON.parse(saved);
+                        return isDark ? DARK : LIGHT;
+                    }
+                } catch (e) {}
+                
+                return matchMedia("(prefers-color-scheme: dark)").matches ? DARK : LIGHT;
+            }
+            
+            // Apply theme to document
+            function applyTheme(theme) {
+                const isDark = theme === DARK;
+                const root = document.documentElement;
+                
+                // Set classes for compatibility
+                root.classList.add(theme);
+                root.classList.remove(isDark ? LIGHT : DARK);
+                root.style.colorScheme = theme;
+            }
+            
+            // Initial application
+            const theme = getTheme();
+            applyTheme(theme);
+            
+            // Listen for system preference changes
+            matchMedia("(prefers-color-scheme: dark)").addEventListener("change", ({ matches }) => {
+                // Only update if using system preference (no localStorage entry)
+                if (!localStorage.getItem(THEME_KEY)) {
+                    applyTheme(matches ? DARK : LIGHT);
+                }
+            });
+            
+            // Set body classes ASAP (before DOMContentLoaded)
+            (function() {
+                const addBodyClass = () => {
+                    const b = document.body;
+                    if (!b) return false;
+                    b.classList.add(theme + "-mode");
+                    return true;
+                };
+
+                // Try immediately
+                if (addBodyClass()) return;
+
+                // Observe until body exists
+                const mo = new MutationObserver(() => {
+                    if (addBodyClass()) mo.disconnect();
+                });
+                mo.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        })();
+    </script>
+    
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="https://percyjie.github.io/2026/11/24/复习知识点Day23-面试复盘八题：Redis、MySQL、RabbitMQ与线程池/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+    
+        
+        <meta name="description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:type" content="article">
+<meta property="og:title" content="复习知识点Day23：面试复盘八题：Redis、MySQL、RabbitMQ与线程池">
+<meta property="og:url" content="https://percyjie.github.io/2026/11/24/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day23-%E9%9D%A2%E8%AF%95%E5%A4%8D%E7%9B%98%E5%85%AB%E9%A2%98%EF%BC%9ARedis%E3%80%81MySQL%E3%80%81RabbitMQ%E4%B8%8E%E7%BA%BF%E7%A8%8B%E6%B1%A0/index.html">
+<meta property="og:site_name" content="Percy&#39;s Note">
+<meta property="og:description" content="人没有梦想，和咸鱼有什么分别">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://percyjie.github.io/images/redefine-og.webp">
+<meta property="article:published_time" content="2026-11-24T09:22:21.000Z">
+<meta property="article:modified_time" content="2026-11-24T09:22:21.000Z">
+<meta property="article:author" content="Percy jie">
+<meta property="article:tag" content="MySQL">
+<meta property="article:tag" content="RabbitMQ">
+<meta property="article:tag" content="Redis">
+<meta property="article:tag" content="Redisson">
+<meta property="article:tag" content="复习知识点">
+<meta property="article:tag" content="线程池">
+<meta property="article:tag" content="面试">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://percyjie.github.io/images/redefine-og.webp">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            复习知识点Day23：面试复盘八题：Redis、MySQL、RabbitMQ与线程池 | Percy&#39;s Note
+        
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/css/build/tailwind.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+    
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"percyjie.github.io","root":"/","language":"zh-CN"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"delete_mask":false,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","highlight_theme":{"light":"github","dark":"vs2015"},"font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"pangu_js":false,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null},"title":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":{"enable":false,"custom_message":null},"side_tools":{"gear_rotation":true,"auto_expand":false},"open_graph":{"enable":true,"image":"/images/redefine-og.webp","description":"人没有梦想，和咸鱼有什么分别"},"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Percy's Note","subtitle":{"text":["人没有梦想，和咸鱼有什么分别"],"hitokoto":{"enable":false,"show_author":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":true,"style":"default","links":[{"icon":"fa-brands fa-github","url":"https://github.com/percyjie"},{"icon":"fa-brands fa-weibo","url":"https://weibo.com/panjie0709"},{"icon":null,"url":null},{"icon":null,"url":null},{"icon":null,"url":null}],"qrs":[{"icon":"fa-brands fa-weixin","qr":null},{"icon":"/images/custom-icon.svg","qr":null}]}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"11.4.1","theme":{"light":"default","dark":"dark"}}},"version":"2.9.0","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"},"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"},"留言板":{"path":"/guestbook","icon":"fa-regular fa-comment-dots"},"心情":{"path":"/mood","icon":"fa-regular fa-face-smile"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"cloud","masonry":{"batch_size":12,"initial_batch_size":24}},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":{"archives":{"path":"/archives","icon":"fa-regular fa-archive"},"categories":{"path":"/categories","icon":"fa-regular fa-folder"},"tags":{"path":"/tags","icon":"fa-regular fa-tags"},"留言板":{"path":"/guestbook","icon":"fa-regular fa-comment-dots"},"心情":{"path":"/mood","icon":"fa-regular fa-face-smile"}}},"article_date_format":"auto","excerpt_length":200,"categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footer":{"runtime":true,"icon":"<i class=\"fa-solid fa-heart fa-beat\" style=\"--fa-animation-duration: 0.5s; color: #f54545\"></i>","start":"2017/03/08 14:00:00","statistics":true,"customize":null,"icp":{"enable":false,"number":null,"url":null}},"footerStart":"2017/03/08 14:00:00","mermaid":{"style":{"light":"default","dark":"dark"}}};
+    window.lang_ago = {"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"};
+    window.i18n = {"search":"站内搜索您需要的内容...","toc":"目录","prev":"上一页","next":"下一页","prev_posts":"上一篇","next_posts":"下一篇","page":"第 %d 页","recent_posts":"最新文章","share":"分享","powered_by":"由 %s 驱动","theme":"主题","rss_feed":"RSS Feed","category":"分类","categories":"分类","tag":"标签","tags":"标签","post":"文章","posts":"文章","tagcloud":"标签云","comment":"评论","comments":"评论","top":"置顶","sticky":"置顶","go-back-home":"回到首页","masonry_loading":"照片加载中...","image_viewer":"图片查看器","close":"关闭","exif":{"title":"EXIF","cards":{"camera":"相机","lens":"镜头","exposure":"曝光","other":"其他"},"fields":{"make":"品牌","model":"机型","date_taken":"拍摄时间","lens_model":"镜头","focal_length":"焦距","focus_mode":"对焦模式","shutter":"快门","aperture":"光圈","iso":"感光度","exposure_program":"曝光程序","exposure_compensation":"曝光补偿","metering_mode":"测光模式","flash":"闪光灯","white_balance":"白平衡","latitude":"纬度","longitude":"经度","altitude":"海拔"},"status":{"loading":"加载中...","no_exif":"无 EXIF 信息","library_missing":"EXIF 库未加载","image_source_missing":"图片地址不可用","unavailable":"EXIF 不可用（可能被 CORS 阻止或缺少元数据）","flag_unavailable":"EXIF 不可用"}},"home":"首页","archive":"归档","archives":"归档","about":"关于","links":"链接","link":"链接","friends":"友情链接","friend":"友情链接","timeline":"时间轴","shuoshuo":"说说","bookmarks":"书签","site_uv":"访问人数","site_pv":"总访问量","read_more":"阅读全文","wordcount":"字","min2read":"分钟","changelog":"更新日志","status":"状态","runtime":"博客已运行","days":"天","hours":"小时","minutes":"分钟","seconds":"秒","optimized_by":"并由 Evan 进行优化","rights":"版权所有","site_posts":"共撰写了 %s 篇文章","site_wordcount":"共 %s 字","copyright":{"title":"标题","author":"作者","link":"链接","create_time":"创建于","update_time":"更新于","license_title":"版权声明","license_content":"本文章采用 %s 进行许可。","all_rights_reserved":"版权所有 &#169 %s，禁止转载。","public_domain":"本文为公有领域作品，可自由转载、引用。"},"ago":{"second":"%s 秒前","minute":"%s 分钟前","hour":"%s 小时前","day":"%s 天前","week":"%s 周前","month":"%s 个月前","year":"%s 年前"},"create_time":"创建","update_time":"更新","expired":"这篇文章最后更新于 %s 天前，内容可能已经过时。"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+
+<body>
+	<div class="progress-bar-container">
+	
+
+	
+	<span class="pjax-progress-bar"></span>
+	<!--        <span class="swup-progress-icon">-->
+	<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+	<!--        </span>-->
+	
+</div>
+
+<main class="page-container" id="swup">
+
+	
+
+	<div class="main-content-container flex flex-col justify-between min-h-dvh">
+		<div class="main-content-header">
+			<header class="navbar-container px-6 md:px-12">
+    <div class="navbar-content transition-navbar ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                Percy&#39;s Note
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    首页
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/archives"
+                                        >
+                                    <i class="fa-regular fa-archive fa-fw"></i>
+                                    归档
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/categories"
+                                        >
+                                    <i class="fa-regular fa-folder fa-fw"></i>
+                                    分类
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/tags"
+                                        >
+                                    <i class="fa-regular fa-tags fa-fw"></i>
+                                    标签
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/guestbook"
+                                        >
+                                    <i class="fa-regular fa-comment-dots fa-fw"></i>
+                                    留言板
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/mood"
+                                        >
+                                    <i class="fa-regular fa-face-smile fa-fw"></i>
+                                    心情
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-dvh w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                首页
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/archives"
+                        >
+                            <span>
+                                归档
+                            </span>
+                            
+                                <i class="fa-regular fa-archive fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/categories"
+                        >
+                            <span>
+                                分类
+                            </span>
+                            
+                                <i class="fa-regular fa-folder fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/tags"
+                        >
+                            <span>
+                                标签
+                            </span>
+                            
+                                <i class="fa-regular fa-tags fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/guestbook"
+                        >
+                            <span>
+                                留言板
+                            </span>
+                            
+                                <i class="fa-regular fa-comment-dots fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/mood"
+                        >
+                            <span>
+                                心情
+                            </span>
+                            
+                                <i class="fa-regular fa-face-smile fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+                
+                    
+                    
+                    
+                    
+                    
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">115</div>
+        <div class="label text-third-text-color text-sm">标签</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">12</div>
+        <div class="label text-third-text-color text-sm">分类</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">35</div>
+        <div class="label text-third-text-color text-sm">文章</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+		</div>
+
+		<div class="main-content-body transition-fade-up">
+			
+
+			<div class="main-content">
+				<div class="post-page-container flex relative justify-between box-border w-full h-full">
+	<div class="article-content-container">
+
+		<div class="article-title relative w-full">
+			
+			<div class="w-full flex items-center pt-6 justify-start">
+				<h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">复习知识点Day23：面试复盘八题：Redis、MySQL、RabbitMQ与线程池</h1>
+			</div>
+			
+		</div>
+
+		
+		<div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+			<div class="avatar w-[46px] h-[46px] shrink-0 rounded-medium border border-border-color p-px">
+				<img src="/images/heard.jpg">
+			</div>
+			<div class="info flex flex-col justify-between">
+				<div class="author flex items-center">
+					<span class="name text-default-text-color text-lg font-semibold">Percy jie</span>
+					
+					<span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv4</span>
+					
+				</div>
+				<div class="meta-info">
+					<div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2026-11-24 17:22:21</span>
+        <span class="mobile">2026-11-24 17:22:21</span>
+        <span class="hover-info">创建</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2026-11-24 17:22:21</span>
+            <span class="mobile">2026-11-24 17:22:21</span>
+            <span class="hover-info">更新</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/%E4%B8%AD%E9%97%B4%E4%BB%B6/">中间件</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/%E9%9D%A2%E8%AF%95/">面试</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/MySQL/">MySQL</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">复习知识点</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Redis/">Redis</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/%E7%BA%BF%E7%A8%8B%E6%B1%A0/">线程池</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/RabbitMQ/">RabbitMQ</a>&nbsp;
+                    </li>
+                
+                    <li>
+                        | <a href="/tags/Redisson/">Redisson</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+        <span class="article-wordcount article-meta-item">
+            <i class="fa-regular fa-typewriter"></i>&nbsp;<span>6.8k 字</span>
+        </span>
+    
+    
+        <span class="article-min2read article-meta-item">
+            <i class="fa-regular fa-clock"></i>&nbsp;<span>25 分钟</span>
+        </span>
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+				</div>
+			</div>
+		</div>
+		
+
+		
+
+
+		<div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+			<blockquote>
+<p>一句话记住今天：这八道题看似分散，考的其实是同一种能力——<strong>把”组件怎么工作”讲到”线上会出什么问题、你怎么兜底”</strong>。Redis 的渐进式 rehash 与大 key、MySQL 的 B+ 树查找与 WAL 落盘、RabbitMQ 的推拉与背压、线程池参数的推导、Redisson 看门狗的续期边界、热 Key 的定位与打散、非自增主键的代价。每题的答法都是四段：<strong>结论 → 机制 → 边界/坑 → 项目里怎么做</strong>。</p>
+</blockquote>
+<h2 id="先说结论：八题速览"><a href="#先说结论：八题速览" class="headerlink" title="先说结论：八题速览"></a>先说结论：八题速览</h2><table>
+<thead>
+<tr>
+<th>#</th>
+<th>问题</th>
+<th>一句话答案</th>
+<th>追问高发点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Redis rehash 流程，大 key 会卡吗</td>
+<td>渐进式分步迁移，不整体卡；卡的是大 key 的 O(N) 命令</td>
+<td>rehash 期间读写怎么找 key、SCAN 怎么遍历</td>
+</tr>
+<tr>
+<td>2</td>
+<td>MySQL 索引查 <code>age=30</code></td>
+<td>二级索引定位到首个 30，沿叶子链表扫完，再回表取整行</td>
+<td>为什么可能不走索引、覆盖索引</td>
+</tr>
+<tr>
+<td>3</td>
+<td>MySQL 写盘是顺序还是随机</td>
+<td>日志顺序写、数据页随机写，WAL 把随机写异步化</td>
+<td>两阶段提交、组提交、脏页刷盘</td>
+</tr>
+<tr>
+<td>4</td>
+<td>RabbitMQ 推还是拉，要轮询吗</td>
+<td>默认推（<code>basic.consume</code>），靠 prefetch 背压；<code>basic.get</code> 才需轮询</td>
+<td>堆积、流控、和 Kafka 拉模式的区别</td>
+</tr>
+<tr>
+<td>5</td>
+<td>为什么 IO 密集 2N、CPU 密集 N+1</td>
+<td>CPU 加一是留余量；IO 线程多数时间在等，用 N×(1+W/C)</td>
+<td>下游容量上限、利特尔法则、虚拟线程</td>
+</tr>
+<tr>
+<td>6</td>
+<td>看门狗续期时间怎么定，一直续期有问题吗</td>
+<td>默认 30s 租期、每 1/3 续一次；一直续期会掩盖 hang 和分区双持有</td>
+<td>leaseTime、fencing token、长 GC</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Redis 热 Key 怎么定位、怎么解决</td>
+<td><code>--hotkeys</code>/埋点定位；本地缓存 + Key 拆分 + 限流</td>
+<td>Cluster 槽位倾斜、hash tag 陷阱</td>
+</tr>
+<tr>
+<td>8</td>
+<td>主键不自增有什么问题</td>
+<td>破坏聚簇索引插入局部性，页分裂、碎片、随机 IO</td>
+<td>全局唯一 ID、二级索引变大</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>记忆锚点：<strong>Redis 怕”单点大”，MySQL 怕”随机写”，MQ 怕”消费者慢”，线程池怕”无界队列”，锁怕”忘记释放”，主键怕”随机插入”。</strong></p>
+</blockquote>
+<h2 id="01-Redis-rehash：大-key-会不会卡住"><a href="#01-Redis-rehash：大-key-会不会卡住" class="headerlink" title="01 Redis rehash：大 key 会不会卡住"></a>01 Redis rehash：大 key 会不会卡住</h2><h3 id="1-1-为什么需要两张表"><a href="#1-1-为什么需要两张表" class="headerlink" title="1.1 为什么需要两张表"></a>1.1 为什么需要两张表</h3><p>Redis 的字典（<code>dict</code>）内部维护 <code>ht[0]</code> 和 <code>ht[1]</code> 两张哈希表。平时只有 <code>ht[0]</code> 在工作，触发扩容/缩容时给 <code>ht[1]</code> 分配新表，然后把元素逐步迁过去。</p>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th><code>ht[0]</code></th>
+<th><code>ht[1]</code></th>
+<th><code>rehashidx</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>正常</td>
+<td>使用中</td>
+<td>空</td>
+<td>-1</td>
+</tr>
+<tr>
+<td>rehash 中</td>
+<td>只减不增</td>
+<td>只增</td>
+<td>当前迁移到的桶下标</td>
+</tr>
+<tr>
+<td>完成</td>
+<td>释放</td>
+<td>成为新 <code>ht[0]</code></td>
+<td>-1</td>
+</tr>
+</tbody></table>
+<h3 id="1-2-什么时候扩容、扩到多大"><a href="#1-2-什么时候扩容、扩到多大" class="headerlink" title="1.2 什么时候扩容、扩到多大"></a>1.2 什么时候扩容、扩到多大</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">负载因子 = used / size（已用节点数 / 桶数量）</span><br><span class="line"></span><br><span class="line">扩容：负载因子 ≥ 1（且没有 RDB/AOF 子进程）</span><br><span class="line">      负载因子 ≥ 5（有子进程时，避免 COW 导致内存翻倍）</span><br><span class="line">缩容：负载因子 &lt; 0.1（且有子进程时也会更保守）</span><br><span class="line">新表大小：used × 2，向上取最近的 2 的幂</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="1-3-渐进式-rehash-五步"><a href="#1-3-渐进式-rehash-五步" class="headerlink" title="1.3 渐进式 rehash 五步"></a>1.3 渐进式 rehash 五步</h3><ol>
+<li>给 <code>ht[1]</code> 分配空间，<code>rehashidx = 0</code>；</li>
+<li><strong>每次增删改查顺带迁移一个非空桶</strong>（不是一次性搬完）；</li>
+<li>空闲时 <code>serverCron</code> 每次最多迁 100 个桶、限时 1ms，避免长时间占用事件循环；</li>
+<li>迁移期间：<strong>读先查 ht[0] 再查 ht[1]；写只写 ht[1]；删除两边都查</strong>；</li>
+<li>全部迁完：释放 <code>ht[0]</code>，交换两张表，<code>rehashidx = -1</code>。</li>
+</ol>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">读写规则（面试必答）</span><br><span class="line">  读：ht[0] → ht[1]</span><br><span class="line">  写：ht[1]（保证新数据只在新表，避免重复迁移）</span><br><span class="line">  删：ht[0]、ht[1] 都查</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="1-4-大-key-到底会不会卡"><a href="#1-4-大-key-到底会不会卡" class="headerlink" title="1.4 大 key 到底会不会卡"></a>1.4 大 key 到底会不会卡</h3><p><strong>结论：rehash 本身不会因为大 key 卡住，因为迁移的是”键值对条目”（指针），不是把 value 整体复制一遍。真正卡住的是大 key 上的 O(N) 命令。</strong></p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>复杂度</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>DEL</code> 百万元素的 Hash/List/Set/ZSet</td>
+<td>O(N)</td>
+<td>同步释放，阻塞事件循环</td>
+</tr>
+<tr>
+<td><code>HGETALL</code> / <code>SMEMBERS</code> / <code>LRANGE 0 -1</code></td>
+<td>O(N)</td>
+<td>大结果集、网络与内存双杀</td>
+</tr>
+<tr>
+<td><code>KEYS *</code></td>
+<td>O(N)</td>
+<td>全库扫描，生产禁用</td>
+</tr>
+<tr>
+<td><code>SORT</code>、<code>FLUSHDB</code>、<code>MIGRATE</code></td>
+<td>O(N)/O(全库)</td>
+<td>明显抖动</td>
+</tr>
+<tr>
+<td>大 key 过期</td>
+<td>同步删除</td>
+<td>过期瞬间卡顿</td>
+</tr>
+<tr>
+<td>RDB/AOF 重写、主从全量同步</td>
+<td>O(数据量)</td>
+<td>fork + COW、带宽压力</td>
+</tr>
+</tbody></table>
+<h3 id="1-5-生产处置"><a href="#1-5-生产处置" class="headerlink" title="1.5 生产处置"></a>1.5 生产处置</h3><table>
+<thead>
+<tr>
+<th>手段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>UNLINK</code> 代替 <code>DEL</code></td>
+<td>后台线程异步释放（lazy free）</td>
+</tr>
+<tr>
+<td><code>HSCAN</code> + 分批 <code>HDEL</code></td>
+<td>大 Hash 分段清理，控制单次耗时</td>
+</tr>
+<tr>
+<td>拆 key</td>
+<td>按时间/ID 分段，单 key 元素控制在几千以内</td>
+</tr>
+<tr>
+<td><code>SCAN</code> 代替 <code>KEYS</code></td>
+<td>游标遍历，不阻塞</td>
+</tr>
+<tr>
+<td>开 <code>lazyfree-lazy-user-del</code></td>
+<td>用户删除也走异步释放</td>
+</tr>
+<tr>
+<td>监控</td>
+<td><code>redis-cli --bigkeys</code>、<code>MEMORY USAGE</code>、<code>SLOWLOG</code>、<code>LATENCY DOCTOR</code></td>
+</tr>
+</tbody></table>
+<h3 id="1-6-面试怎么答"><a href="#1-6-面试怎么答" class="headerlink" title="1.6 面试怎么答"></a>1.6 面试怎么答</h3><blockquote>
+<p>“Redis 的 rehash 是渐进式的：扩容时给 ht[1] 分配两倍空间，每次命令顺带迁移一个桶，空闲时 serverCron 每轮最多 100 个桶、限时 1ms，所以不会整体卡住。迁移期间读先查 ht[0] 再查 ht[1]，写只写 ht[1]。大 key 不会因为 rehash 被整体搬动，因为迁移的是指针；但大 key 上的 DEL、HGETALL、KEYS 是 O(N)，会阻塞单线程，所以生产用 UNLINK、HSCAN 分批删，并把大 key 拆小。”</p>
+</blockquote>
+<p><strong>可能追问</strong>：”rehash 期间 SCAN 会不会漏 key？”——SCAN 用反向二进制迭代，能容忍 rehash 期间表大小变化，但<strong>允许重复返回</strong>；保证”遍历期间一直在的 key 至少返回一次”，业务侧要去重。</p>
+<h2 id="02-MySQL-索引查找：WHERE-age-30-到底怎么查"><a href="#02-MySQL-索引查找：WHERE-age-30-到底怎么查" class="headerlink" title="02 MySQL 索引查找：WHERE age = 30 到底怎么查"></a>02 MySQL 索引查找：<code>WHERE age = 30</code> 到底怎么查</h2><h3 id="2-1-先看-B-树长什么样"><a href="#2-1-先看-B-树长什么样" class="headerlink" title="2.1 先看 B+ 树长什么样"></a>2.1 先看 B+ 树长什么样</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">              [ 根页：20 | 40 ]</span><br><span class="line">               /      |      \</span><br><span class="line">     [10|20]        [30|40]        [50|...]</span><br><span class="line">      /   \          /   \           /   \</span><br><span class="line">叶子: (5,id1)(10,id2)(20,id3)(30,id4)(30,id5)(40,id6)(50,id7)...</span><br><span class="line">      叶子之间用双向链表串起来 →</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li><strong>非叶子节点</strong>只存索引键 + 页指针，不存整行；</li>
+<li><strong>二级索引叶子</strong>存 <code>(age, 主键)</code>；</li>
+<li><strong>聚簇索引（主键）叶子</strong>存整行数据；</li>
+<li>叶子节点之间有序链表，天然支持范围扫描。</li>
+</ul>
+<h3 id="2-2-五步查找过程"><a href="#2-2-五步查找过程" class="headerlink" title="2.2 五步查找过程"></a>2.2 五步查找过程</h3><ol>
+<li>从根页开始，页内二分查找，定位到 <code>30</code> 可能所在的子页；</li>
+<li>逐层向下，直到叶子页；</li>
+<li>找到<strong>第一个</strong> <code>age = 30</code> 的记录（非唯一索引不保证唯一）；</li>
+<li>顺着叶子链表继续向右扫，直到 <code>age &gt; 30</code> 为止；</li>
+<li>每条记录拿主键，去聚簇索引<strong>回表</strong>取整行。</li>
+</ol>
+<div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">-- 假设：CREATE INDEX idx_age ON user(age);</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> <span class="keyword">user</span> <span class="keyword">WHERE</span> age <span class="operator">=</span> <span class="number">30</span>;</span><br><span class="line"><span class="comment">-- 执行计划典型：type=ref, key=idx_age, Extra=NULL（需要回表）</span></span><br></pre></td></tr></table></figure></div>
+
+<p>如果索引是 <code>(age, name)</code> 且只查这两列：</p>
+<div class="code-container" data-rel="Sql"><figure class="iseeu highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> age, name <span class="keyword">FROM</span> <span class="keyword">user</span> <span class="keyword">WHERE</span> age <span class="operator">=</span> <span class="number">30</span>;</span><br><span class="line"><span class="comment">-- Extra: Using index —— 覆盖索引，不回表</span></span><br></pre></td></tr></table></figure></div>
+
+<h3 id="2-3-为什么优化器可能”有索引也不用”"><a href="#2-3-为什么优化器可能”有索引也不用”" class="headerlink" title="2.3 为什么优化器可能”有索引也不用”"></a>2.3 为什么优化器可能”有索引也不用”</h3><table>
+<thead>
+<tr>
+<th>原因</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>匹配行太多、区分度低</td>
+<td>回表是随机 IO，扫 30% 的行可能不如全表顺序扫</td>
+</tr>
+<tr>
+<td><code>SELECT *</code> 列多</td>
+<td>回表成本高，覆盖索引又覆盖不了</td>
+</tr>
+<tr>
+<td>统计信息过期</td>
+<td>估算行数失真，选错计划；<code>ANALYZE TABLE</code> 修正</td>
+</tr>
+<tr>
+<td>隐式转换</td>
+<td><code>age</code> 是 varchar 却写 <code>age = 30</code>，列被转成数字，索引失效</td>
+</tr>
+<tr>
+<td>列上有函数/运算</td>
+<td><code>WHERE age + 1 = 31</code> 用不上索引</td>
+</tr>
+</tbody></table>
+<h3 id="2-4-面试怎么答"><a href="#2-4-面试怎么答" class="headerlink" title="2.4 面试怎么答"></a>2.4 面试怎么答</h3><blockquote>
+<p>“二级索引的叶子节点存的是 age 和主键，非叶子只存 age 和页指针。查 age=30 时从根页二分定位到叶子，找到第一个 30，因为不是唯一索引，要沿叶子链表继续扫到大于 30 为止；然后拿每条记录的主键回聚簇索引取整行。如果查询列都在索引里就是覆盖索引，不用回表。优化器也可能因为匹配行太多、回表随机 IO 太贵而选择全表扫描，所以要结合 EXPLAIN 的 rows、filtered 和实际数据分布判断。”</p>
+</blockquote>
+<p><strong>可能追问</strong>：”为什么二级索引不直接存整行？”——省空间、减少写放大；代价是回表，所以才有覆盖索引这个优化方向。</p>
+<h2 id="03-MySQL-写磁盘：顺序写还是随机写"><a href="#03-MySQL-写磁盘：顺序写还是随机写" class="headerlink" title="03 MySQL 写磁盘：顺序写还是随机写"></a>03 MySQL 写磁盘：顺序写还是随机写</h2><h3 id="3-1-一条-update-的完整链路"><a href="#3-1-一条-update-的完整链路" class="headerlink" title="3.1 一条 update 的完整链路"></a>3.1 一条 update 的完整链路</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">1. 在 Buffer Pool 找页，未命中则从磁盘随机读入</span><br><span class="line">2. 修改内存页，写 undo log（旧版本，用于回滚和 MVCC）</span><br><span class="line">3. 变更写入 redo log buffer（物理日志）</span><br><span class="line">4. 提交：两阶段提交 —— redo prepare → 写 binlog → redo commit</span><br><span class="line">5. innodb_flush_log_at_trx_commit=1、sync_binlog=1 时各一次 fsync</span><br><span class="line">6. 数据页仍是脏页，由 page cleaner 后台异步刷盘</span><br><span class="line">7. checkpoint 推进，redo 空间才能复用</span><br></pre></td></tr></table></figure></div>
+
+<p><strong>关键结论：事务提交成功 ≠ 数据页已落盘。</strong> 持久性靠 redo log，数据页是异步刷的。</p>
+<h3 id="3-2-哪些顺序、哪些随机"><a href="#3-2-哪些顺序、哪些随机" class="headerlink" title="3.2 哪些顺序、哪些随机"></a>3.2 哪些顺序、哪些随机</h3><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>写入方式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>redo log</td>
+<td><strong>顺序</strong></td>
+<td>循环文件追加写，checkpoint 推进后覆盖</td>
+</tr>
+<tr>
+<td>binlog</td>
+<td><strong>顺序</strong></td>
+<td>追加写，文件切换时 rotate</td>
+</tr>
+<tr>
+<td>doublewrite</td>
+<td><strong>顺序</strong></td>
+<td>先顺序写双写区，再写数据页，防页损坏</td>
+</tr>
+<tr>
+<td>数据页</td>
+<td><strong>随机</strong></td>
+<td>16KB 一页，按页号定位，位置分散</td>
+</tr>
+<tr>
+<td>undo 页</td>
+<td><strong>随机</strong></td>
+<td>undo tablespace 页式存储</td>
+</tr>
+<tr>
+<td>二级索引</td>
+<td><strong>随机</strong></td>
+<td>非唯一索引可用 change buffer 缓冲合并</td>
+</tr>
+<tr>
+<td>聚簇索引插入</td>
+<td><strong>近似顺序</strong></td>
+<td>自增主键追加；随机主键触发页分裂</td>
+</tr>
+</tbody></table>
+<p>一句话：<strong>日志顺序写，数据随机写；WAL 让”等日志”代替”等数据页”。</strong></p>
+<h3 id="3-3-为什么这样设计还快"><a href="#3-3-为什么这样设计还快" class="headerlink" title="3.3 为什么这样设计还快"></a>3.3 为什么这样设计还快</h3><table>
+<thead>
+<tr>
+<th>机制</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WAL</td>
+<td>提交只等顺序日志，随机数据页写延后</td>
+</tr>
+<tr>
+<td>组提交（group commit）</td>
+<td>多个事务合并一次 fsync</td>
+</tr>
+<tr>
+<td>异步刷脏</td>
+<td>多个 page cleaner 并发刷，不阻塞提交</td>
+</tr>
+<tr>
+<td>change buffer</td>
+<td>非唯一二级索引写先缓冲，后续 merge，减少随机读改写</td>
+</tr>
+<tr>
+<td>自增主键</td>
+<td>聚簇索引追加，减少页分裂</td>
+</tr>
+<tr>
+<td><code>O_DIRECT</code></td>
+<td>绕过 OS page cache，避免双缓冲</td>
+</tr>
+<tr>
+<td>SSD</td>
+<td>随机写差距缩小，但顺序仍更优</td>
+</tr>
+</tbody></table>
+<h3 id="3-4-关键参数与坑"><a href="#3-4-关键参数与坑" class="headerlink" title="3.4 关键参数与坑"></a>3.4 关键参数与坑</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>建议</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>innodb_flush_log_at_trx_commit</code></td>
+<td>金融用 1；普通业务可压测后放宽</td>
+<td>0/2 崩溃可能丢 1 秒事务</td>
+</tr>
+<tr>
+<td><code>sync_binlog</code></td>
+<td>与上者配合用 1</td>
+<td>降低提交吞吐</td>
+</tr>
+<tr>
+<td><code>innodb_flush_method</code></td>
+<td>常用 <code>O_DIRECT</code></td>
+<td>依赖文件系统行为</td>
+</tr>
+<tr>
+<td><code>innodb_io_capacity(_max)</code></td>
+<td>按磁盘能力设置</td>
+<td>太低刷不动，太高打满 IO</td>
+</tr>
+<tr>
+<td><code>innodb_max_dirty_pages_pct</code></td>
+<td>控制脏页上限</td>
+<td>太高导致突发刷脏抖动</td>
+</tr>
+</tbody></table>
+<p><strong>大事务的代价</strong>：redo/undo 膨胀、脏页集中刷导致抖动、锁持有时间长、回滚慢。批量操作要分批提交（比如每 500~1000 行一次）。</p>
+<h3 id="3-5-面试怎么答"><a href="#3-5-面试怎么答" class="headerlink" title="3.5 面试怎么答"></a>3.5 面试怎么答</h3><blockquote>
+<p>“不是二选一。redo log 和 binlog 是顺序追加写，数据页是随机写。InnoDB 用 WAL：事务提交只保证 redo 和 binlog 落盘，数据页还在 Buffer Pool 里是脏页，由后台 page cleaner 异步刷，checkpoint 推进后 redo 才能复用。所以提交快，但’提交成功’不等于’数据页已写盘’，崩溃恢复靠 redo。写入性能还依赖组提交、change buffer、doublewrite 和自增主键减少页分裂。”</p>
+</blockquote>
+<p><strong>可能追问</strong>：”redo 和 binlog 区别？”——redo 是 InnoDB 物理日志、循环写、崩溃恢复；binlog 是 Server 层逻辑日志、追加写、主从复制与按时间点恢复；两阶段提交保证两者一致。</p>
+<h2 id="04-RabbitMQ：推还是拉，拉消息要一直轮询吗"><a href="#04-RabbitMQ：推还是拉，拉消息要一直轮询吗" class="headerlink" title="04 RabbitMQ：推还是拉，拉消息要一直轮询吗"></a>04 RabbitMQ：推还是拉，拉消息要一直轮询吗</h2><h3 id="4-1-默认是推模式"><a href="#4-1-默认是推模式" class="headerlink" title="4.1 默认是推模式"></a>4.1 默认是推模式</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 推模式：注册消费者，broker 主动推</span></span><br><span class="line">channel.basicQos(<span class="number">50</span>);                       <span class="comment">// 未 ack 在途上限，形成背压</span></span><br><span class="line">channel.basicConsume(<span class="string">&quot;order.queue&quot;</span>, <span class="literal">false</span>, consumer);   <span class="comment">// autoAck=false</span></span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li>broker 把消息主动推到消费者 socket，消费者库内部有分发线程；</li>
+<li><strong>业务代码不需要轮询</strong>；</li>
+<li>消费能力靠 <code>basic.qos(prefetchCount)</code> 控制：未 ack 的消息达到上限，broker 就停止推送，这就是 RabbitMQ 的背压。</li>
+</ul>
+<h3 id="4-2-拉模式-basic-get-的问题"><a href="#4-2-拉模式-basic-get-的问题" class="headerlink" title="4.2 拉模式 basic.get 的问题"></a>4.2 拉模式 <code>basic.get</code> 的问题</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">GetResponse</span> <span class="variable">resp</span> <span class="operator">=</span> channel.basicGet(<span class="string">&quot;order.queue&quot;</span>, <span class="literal">false</span>);</span><br><span class="line"><span class="keyword">if</span> (resp == <span class="literal">null</span>) &#123;</span><br><span class="line">    <span class="comment">// 没消息：要么 sleep 后重试，要么空转</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>需要循环调用</td>
+<td>取不到就返回 null，持续消费只能自己轮询</td>
+</tr>
+<tr>
+<td>空转开销</td>
+<td>短 sleep 浪费延迟，长 sleep 浪费吞吐</td>
+</tr>
+<tr>
+<td>每次一条</td>
+<td>批量场景效率低</td>
+</tr>
+<tr>
+<td>经典队列不支持长轮询</td>
+<td>不像 Kafka 的 <code>poll(timeout)</code> 能挂起等待</td>
+</tr>
+<tr>
+<td>公平性差</td>
+<td>多个消费者各自抢，难以精确控制节奏</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>结论：<strong>RabbitMQ 里说”拉”，通常是”推模式 + prefetch + 手动 ack”实现可控消费，而不是 <code>basic.get</code> 轮询。</strong> 需要按 offset 回放/拉取的场景用 RabbitMQ Streams。</p>
+</blockquote>
+<h3 id="4-3-推模式的流控与可靠性"><a href="#4-3-推模式的流控与可靠性" class="headerlink" title="4.3 推模式的流控与可靠性"></a>4.3 推模式的流控与可靠性</h3><table>
+<thead>
+<tr>
+<th>机制</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>prefetch</code></td>
+<td>控制单消费者未 ack 在途数，防止被压垮</td>
+</tr>
+<tr>
+<td>手动 ack</td>
+<td>处理成功才确认，失败可 nack/requeue</td>
+</tr>
+<tr>
+<td>publisher confirm</td>
+<td>确认消息已到 broker，防生产端丢</td>
+</tr>
+<tr>
+<td>mandatory / return</td>
+<td>路由失败回退给生产者</td>
+</tr>
+<tr>
+<td>死信队列</td>
+<td>重试超限、过期、被拒绝的消息隔离</td>
+</tr>
+<tr>
+<td>连接/通道流控</td>
+<td>broker 内存/磁盘告警时阻塞发布端</td>
+</tr>
+</tbody></table>
+<h3 id="4-4-和-Kafka-的区别"><a href="#4-4-和-Kafka-的区别" class="headerlink" title="4.4 和 Kafka 的区别"></a>4.4 和 Kafka 的区别</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RabbitMQ</th>
+<th>Kafka</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>消费模型</td>
+<td>推（broker 推给消费者）</td>
+<td>拉（消费者 <code>poll</code>）</td>
+</tr>
+<tr>
+<td>节奏控制</td>
+<td>broker 按 prefetch 推</td>
+<td>消费者自己控制拉取量</td>
+</tr>
+<tr>
+<td>长轮询</td>
+<td>经典队列无</td>
+<td><code>poll(timeout)</code> 天然长轮询</td>
+</tr>
+<tr>
+<td>消息语义</td>
+<td>队列入队出队、灵活路由</td>
+<td>分区日志、按 offset 回放</td>
+</tr>
+<tr>
+<td>堆积能力</td>
+<td>堆积到内存/磁盘，性能下降明显</td>
+<td>顺序日志，天然适合大量堆积</td>
+</tr>
+</tbody></table>
+<h3 id="4-5-面试怎么答"><a href="#4-5-面试怎么答" class="headerlink" title="4.5 面试怎么答"></a>4.5 面试怎么答</h3><blockquote>
+<p>“RabbitMQ 默认是推模式，消费者 <code>basic.consume</code> 之后 broker 主动推，不需要业务轮询；用 <code>basic.qos</code> 设置 prefetch，控制未 ack 的在途消息数形成背压，配合手动 ack 保证可靠性。<code>basic.get</code> 才是拉模式，每次取一条，取不到返回空，要持续消费就得循环，空转和延迟都不划算，经典队列也没有长轮询。所以生产不用 get 轮询，堆积时应该扩消费者、调 prefetch、批量 ack、死信隔离，而不是加轮询。”</p>
+</blockquote>
+<p><strong>可能追问</strong>：”prefetch 调大是不是吞吐更高？”——单消费者处理快时可以提高，但下游慢时只会把消息堆在客户端内存里，延迟和 OOM 风险都上升；要按处理能力和下游容量定。</p>
+<h2 id="05-线程池：为什么-IO-密集-2N、CPU-密集-N-1"><a href="#05-线程池：为什么-IO-密集-2N、CPU-密集-N-1" class="headerlink" title="05 线程池：为什么 IO 密集 2N、CPU 密集 N+1"></a>05 线程池：为什么 IO 密集 2N、CPU 密集 N+1</h2><h3 id="5-1-两个公式的来由"><a href="#5-1-两个公式的来由" class="headerlink" title="5.1 两个公式的来由"></a>5.1 两个公式的来由</h3><div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">CPU 密集型：core ≈ N + 1</span><br><span class="line">IO  密集型：core ≈ N × (1 + 等待时间 / 计算时间)</span><br></pre></td></tr></table></figure></div>
+
+<ul>
+<li><strong>CPU 密集 N+1</strong>：N 个核跑 N 个线程已经打满；+1 是为了某个线程发生缺页、GC、锁等待时还有线程能用上 CPU。再多只会增加上下文切换和缓存失效。</li>
+<li><strong>IO 密集 2N</strong>：线程大部分时间在等 DB、RPC、磁盘，不占 CPU，要多开线程把 CPU 填满。等待时间和计算时间大致相当时，<code>N × (1+1) = 2N</code>。等待是计算的 9 倍，就是 10N——<strong>2N 只是经验值，不是定律</strong>。</li>
+</ul>
+<h3 id="5-2-还有三个上限，别只套公式"><a href="#5-2-还有三个上限，别只套公式" class="headerlink" title="5.2 还有三个上限，别只套公式"></a>5.2 还有三个上限，别只套公式</h3><table>
+<thead>
+<tr>
+<th>上限</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>下游容量</td>
+<td>DB 连接池、第三方 QPS、LLM 并发配额；线程再多也只会排队</td>
+</tr>
+<tr>
+<td>内存</td>
+<td>每线程栈 512KB~1MB，几百线程就是几百 MB</td>
+</tr>
+<tr>
+<td>竞争与切换</td>
+<td>锁竞争、上下文切换、缓存失效，可能越加越慢</td>
+</tr>
+</tbody></table>
+<p><strong>受限下游用利特尔法则反推</strong>：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">并发上限 = 下游允许的 QPS × 平均耗时</span><br><span class="line">例：LLM 下游允许 10 QPS、单次 2 秒 → 并发上限 20</span><br><span class="line">队列长度 ≈ 可接受等待时间 × 处理速率</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="5-3-配置只是第一步，配套更重要"><a href="#5-3-配置只是第一步，配套更重要" class="headerlink" title="5.3 配置只是第一步，配套更重要"></a>5.3 配置只是第一步，配套更重要</h3><div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="type">ThreadPoolExecutor</span> <span class="variable">pool</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ThreadPoolExecutor</span>(</span><br><span class="line">        <span class="number">16</span>, <span class="number">32</span>, <span class="number">60</span>, TimeUnit.SECONDS,</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">ArrayBlockingQueue</span>&lt;&gt;(<span class="number">500</span>),                 <span class="comment">// 必须有界</span></span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">ThreadFactory</span>() &#123; <span class="comment">/* 命名：llm-doc-%d */</span> &#125;,</span><br><span class="line">        <span class="keyword">new</span> <span class="title class_">ThreadPoolExecutor</span>.CallerRunsPolicy());    <span class="comment">// 背压/降速</span></span><br></pre></td></tr></table></figure></div>
+
+<table>
+<thead>
+<tr>
+<th>配套</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>业务隔离</td>
+<td>LLM、PDF、通知、导出各一个池，避免互相拖垮</td>
+</tr>
+<tr>
+<td>有界队列</td>
+<td>无界队列 = 把 OOM 延后，还会让拒绝策略失效</td>
+</tr>
+<tr>
+<td>拒绝策略</td>
+<td>核心链路 CallerRuns 降速；非核心丢弃 + 告警；不能默认 Abort 抛给用户</td>
+</tr>
+<tr>
+<td>上下文传递</td>
+<td><code>TaskDecorator</code> 传 traceId/租户，finally 清理</td>
+</tr>
+<tr>
+<td>监控</td>
+<td>active、queueSize、rejected、任务等待时长；队列 80% 或拒绝 &gt; 0 告警</td>
+</tr>
+<tr>
+<td>关键任务持久化</td>
+<td>先落任务表/MQ，进程重启可补偿</td>
+</tr>
+</tbody></table>
+<h3 id="5-4-虚拟线程能替代吗"><a href="#5-4-虚拟线程能替代吗" class="headerlink" title="5.4 虚拟线程能替代吗"></a>5.4 虚拟线程能替代吗</h3><ul>
+<li>JDK 21 起可用，IO 密集场景收益明显；</li>
+<li>JDK 21 时代 <code>synchronized</code> 会 pinning 载体线程，JDK 24（JEP 491）已改善；</li>
+<li>但<strong>瓶颈会转移到连接池和下游限流</strong>，线程不再是瓶颈时，加线程没有意义；</li>
+<li>不要无脑替换，先看下游容量和阻塞点。</li>
+</ul>
+<h3 id="5-5-面试怎么答"><a href="#5-5-面试怎么答" class="headerlink" title="5.5 面试怎么答"></a>5.5 面试怎么答</h3><blockquote>
+<p>“CPU 密集按核数加一，留一点余量应对缺页和 GC；IO 密集用 N×(1+等待/计算)，等待和计算差不多就是 2N，但它只是经验值。实际还要受下游容量、内存和锁竞争约束，比如 LLM 单次 2 秒、下游只允许 10 QPS，并发上限就是 20，超了只能排队或降级。队列必须有界，按可接受等待时间乘处理速率估长度；拒绝策略按业务分级，核心降速、非核心丢弃告警，并且不同下游用独立线程池隔离。”</p>
+</blockquote>
+<h2 id="06-Redisson-看门狗：续期时间怎么定，一直续期有问题吗"><a href="#06-Redisson-看门狗：续期时间怎么定，一直续期有问题吗" class="headerlink" title="06 Redisson 看门狗：续期时间怎么定，一直续期有问题吗"></a>06 Redisson 看门狗：续期时间怎么定，一直续期有问题吗</h2><h3 id="6-1-机制"><a href="#6-1-机制" class="headerlink" title="6.1 机制"></a>6.1 机制</h3><table>
+<thead>
+<tr>
+<th>项</th>
+<th>默认值/行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>lockWatchdogTimeout</code></td>
+<td>30 秒（锁的初始租期）</td>
+</tr>
+<tr>
+<td>续期间隔</td>
+<td>租期的 1/3，即 10 秒</td>
+</tr>
+<tr>
+<td>生效条件</td>
+<td><strong>只有在没有显式指定 <code>leaseTime</code> 时</strong>才启用</td>
+</tr>
+<tr>
+<td>显式 leaseTime</td>
+<td>看门狗不生效，到期自动释放</td>
+</tr>
+</tbody></table>
+<div class="code-container" data-rel="Java"><figure class="iseeu highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 会触发看门狗：不传 leaseTime</span></span><br><span class="line"><span class="type">RLock</span> <span class="variable">lock</span> <span class="operator">=</span> redisson.getLock(<span class="string">&quot;order:&quot;</span> + orderId);</span><br><span class="line">lock.lock();                 <span class="comment">// 后台每 10s 续到 30s</span></span><br><span class="line"><span class="keyword">try</span> &#123; doWork(); &#125; <span class="keyword">finally</span> &#123; lock.unlock(); &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 不触发看门狗：明确租期，到期释放</span></span><br><span class="line">lock.lock(<span class="number">30</span>, TimeUnit.SECONDS);</span><br></pre></td></tr></table></figure></div>
+
+<h3 id="6-2-为什么是-1-3"><a href="#6-2-为什么是-1-3" class="headerlink" title="6.2 为什么是 1/3"></a>6.2 为什么是 1/3</h3><p>留出<strong>两次续期失败的容忍窗口</strong>：如果每 1/3 续一次，即使连续两次网络抖动导致续期失败，租期还剩约 10 秒，不会立刻丢锁；同时续期频率不会高到给 Redis 造成额外压力。</p>
+<h3 id="6-3-一直续期会有什么问题"><a href="#6-3-一直续期会有什么问题" class="headerlink" title="6.3 一直续期会有什么问题"></a>6.3 一直续期会有什么问题</h3><table>
+<thead>
+<tr>
+<th>问题</th>
+<th>场景</th>
+<th>后果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>业务 hang 住/忘记 unlock</td>
+<td>死循环、线程阻塞、异常路径漏 unlock</td>
+<td>锁被无限续期，别人永远拿不到</td>
+</tr>
+<tr>
+<td>网络分区</td>
+<td>客户端以为持锁，Redis 侧已过期，另一客户端拿到</td>
+<td>两个持有者同时写</td>
+</tr>
+<tr>
+<td>长 GC</td>
+<td>STW 超过租期，业务还在跑但锁已过期</td>
+<td>并发写入、数据错乱</td>
+</tr>
+<tr>
+<td>定时器开销</td>
+<td>锁数量很大</td>
+<td>大量续期任务和 timer 压力</td>
+</tr>
+<tr>
+<td>无限等待</td>
+<td>业务没有超时控制</td>
+<td>请求堆积、线程池耗尽</td>
+</tr>
+</tbody></table>
+<h3 id="6-4-生产实践"><a href="#6-4-生产实践" class="headerlink" title="6.4 生产实践"></a>6.4 生产实践</h3><ol>
+<li><strong>能预估时长就传 <code>leaseTime</code></strong>，不要让看门狗兜底一切；</li>
+<li><code>tryLock(waitTime, leaseTime, unit)</code> 设置获取等待，避免无限阻塞；</li>
+<li><code>finally</code> 里 unlock，并校验持有者（Redisson 已用唯一 value 校验）；</li>
+<li>关键业务加<strong>幂等 + 版本号/fencing token</strong>，防止分区下的双持有写坏数据；</li>
+<li>监控锁持有时间，超过阈值告警；</li>
+<li>锁内不要做长 RPC、等用户输入、批量大任务。</li>
+</ol>
+<h3 id="6-5-面试怎么答"><a href="#6-5-面试怎么答" class="headerlink" title="6.5 面试怎么答"></a>6.5 面试怎么答</h3><blockquote>
+<p>“Redisson 默认租期 30 秒，看门狗每 1/3 也就是 10 秒续一次，取 1/3 是为了容忍两次续期失败还有余量。它只在没有显式 leaseTime 时生效。一直续期的风险是：业务 hang 或忘记 unlock 时锁永不过期，别人永远拿不到；网络分区时可能出现两个客户端都以为自己持锁，必须靠业务幂等和 fencing token 兜底；长 GC 也可能让锁在业务执行中过期。所以能估时长就传 leaseTime，tryLock 设等待时间，finally 释放，关键写操作加幂等。”</p>
+</blockquote>
+<h2 id="07-Redis-热-Key：怎么定位、怎么解决"><a href="#07-Redis-热-Key：怎么定位、怎么解决" class="headerlink" title="07 Redis 热 Key：怎么定位、怎么解决"></a>07 Redis 热 Key：怎么定位、怎么解决</h2><h3 id="7-1-定位手段"><a href="#7-1-定位手段" class="headerlink" title="7.1 定位手段"></a>7.1 定位手段</h3><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>说明</th>
+<th>局限</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>redis-cli --hotkeys</code></td>
+<td>基于 LFU 计数排序</td>
+<td>需要 LFU 淘汰策略，采样统计</td>
+</tr>
+<tr>
+<td><code>OBJECT FREQ key</code></td>
+<td>查单 key 的 LFU 频率</td>
+<td>需逐个查</td>
+</tr>
+<tr>
+<td><code>MONITOR</code></td>
+<td>实时看命令</td>
+<td>开销大，只能短时应急</td>
+</tr>
+<tr>
+<td>代理层指标</td>
+<td>Codis/Twemproxy/云代理的 key 级 QPS</td>
+<td>依赖基础设施</td>
+</tr>
+<tr>
+<td>客户端埋点</td>
+<td>本地计数 + 定时上报</td>
+<td>有采样误差</td>
+</tr>
+<tr>
+<td>平台探针</td>
+<td>京东 Hotkey、有赞 TMC 等</td>
+<td>建设成本高</td>
+</tr>
+</tbody></table>
+<p>补充：<code>--bigkeys</code>、<code>MEMORY USAGE</code> 找的是大 key，不是热 key；热 key 和大 key 经常同时出现，但要分开治理。</p>
+<h3 id="7-2-解决手段"><a href="#7-2-解决手段" class="headerlink" title="7.2 解决手段"></a>7.2 解决手段</h3><table>
+<thead>
+<tr>
+<th>手段</th>
+<th>做法</th>
+<th>注意</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>本地缓存</td>
+<td>Caffeine + 短 TTL（1~5s）挡住绝大多数读</td>
+<td>多节点一致性：Pub/Sub 失效 + 短 TTL 兜底</td>
+</tr>
+<tr>
+<td>Key 拆分</td>
+<td><code>key:0</code> ~ <code>key:N-1</code>，读随机、写全量</td>
+<td>写放大；计数类可本地聚合</td>
+</tr>
+<tr>
+<td>多副本读</td>
+<td>从副本分担读</td>
+<td>热 key 仍属一个槽位，只解决读吞吐</td>
+</tr>
+<tr>
+<td>限流/降级</td>
+<td>单 key 令牌桶，超限返回旧值/默认值</td>
+<td>会损失部分请求</td>
+</tr>
+<tr>
+<td>预热</td>
+<td>活动前把热点数据加载到本地/Redis</td>
+<td>要防同时失效</td>
+</tr>
+<tr>
+<td>逻辑过期</td>
+<td>不设物理 TTL，异步重建</td>
+<td>实现复杂</td>
+</tr>
+<tr>
+<td>计数聚合</td>
+<td>本地累加后批量写，或分片计数再汇总</td>
+<td>精度与实时性权衡</td>
+</tr>
+</tbody></table>
+<p><strong>Cluster 关键点</strong>：热 key 只落一个槽位，加节点并不能分摊；拆 key 时<strong>不要加相同的 <code>{hash tag}</code></strong>，否则所有分片仍落同一个槽位。细节在 Day18 展开过，这里记结论。</p>
+<h3 id="7-3-面试怎么答"><a href="#7-3-面试怎么答" class="headerlink" title="7.3 面试怎么答"></a>7.3 面试怎么答</h3><blockquote>
+<p>“定位上，LFU 策略下用 <code>--hotkeys</code> 或 <code>OBJECT FREQ</code>，线上更常见的是代理层指标和客户端埋点，MONITOR 只能短时抓。解决分三层：读热点先上本地缓存，短 TTL 加广播失效；再不行把 key 拆成 N 份，读随机、写全量，Cluster 下注意别加相同 hash tag，否则白拆；同时做限流降级和活动前预热。写热点或计数型热 key 用本地聚合批量写或分片计数。”</p>
+</blockquote>
+<h2 id="08-MySQL-主键不自增会有什么问题"><a href="#08-MySQL-主键不自增会有什么问题" class="headerlink" title="08 MySQL 主键不自增会有什么问题"></a>08 MySQL 主键不自增会有什么问题</h2><h3 id="8-1-聚簇索引的插入局部性"><a href="#8-1-聚簇索引的插入局部性" class="headerlink" title="8.1 聚簇索引的插入局部性"></a>8.1 聚簇索引的插入局部性</h3><p>InnoDB 的表按主键组织成聚簇索引，数据页里的行按主键有序排列：</p>
+<table>
+<thead>
+<tr>
+<th>主键类型</th>
+<th>插入位置</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>自增 BIGINT</td>
+<td>永远追加到最后一页</td>
+<td>页填充率高、顺序 IO、缓存友好</td>
+</tr>
+<tr>
+<td>随机 UUID v4</td>
+<td>随机插入中间页</td>
+<td>页分裂、碎片、随机 IO、写放大</td>
+</tr>
+<tr>
+<td>趋势递增（雪花/ULID）</td>
+<td>大致追加</td>
+<td>接近自增，兼顾全局唯一</td>
+</tr>
+</tbody></table>
+<p>页分裂的连锁反应：新页分配、旧页搬数据、索引碎片、Buffer Pool 命中率下降，最终插入变慢；碎片多了还要 <code>OPTIMIZE TABLE</code> 重建（大表要用 gh-ost/pt-osc，避免锁表）。</p>
+<h3 id="8-2-二级索引会被主键拖累"><a href="#8-2-二级索引会被主键拖累" class="headerlink" title="8.2 二级索引会被主键拖累"></a>8.2 二级索引会被主键拖累</h3><p>二级索引叶子存的是<strong>主键值</strong>：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">UUID 字符串主键：36 字节</span><br><span class="line">BIGINT 自增主键：8 字节</span><br></pre></td></tr></table></figure></div>
+
+<p>一张表有几个二级索引，每个索引的每条记录都要存主键——主键大一倍，所有二级索引都跟着变大，内存、IO、比较成本全部上升。</p>
+<h3 id="8-3-分库分表下的全局唯一"><a href="#8-3-分库分表下的全局唯一" class="headerlink" title="8.3 分库分表下的全局唯一"></a>8.3 分库分表下的全局唯一</h3><p>自增主键在单库单表没问题，但分库分表后各分片会重复。正确做法不是退回随机 UUID，而是：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Snowflake</td>
+<td>时间有序、64 位、需处理机器 ID 与时钟回拨</td>
+</tr>
+<tr>
+<td>号段模式（Leaf）</td>
+<td>批量取号、DB 压力小、ID 趋势递增</td>
+</tr>
+<tr>
+<td>ULID</td>
+<td>时间有序 + 随机后缀，字符串/二进制都可</td>
+</tr>
+<tr>
+<td>数据库自增步长</td>
+<td>简单但扩容不灵活，不推荐大规模使用</td>
+</tr>
+</tbody></table>
+<p>业务唯一键（订单号、案件编号）建<strong>唯一索引</strong>即可，不要直接当聚簇主键。</p>
+<h3 id="8-4-面试怎么答"><a href="#8-4-面试怎么答" class="headerlink" title="8.4 面试怎么答"></a>8.4 面试怎么答</h3><blockquote>
+<p>“InnoDB 是聚簇索引，数据按主键有序存。自增主键是追加写，页填充率高；随机主键比如 UUID 会插到中间，触发页分裂、产生碎片和随机 IO，Buffer Pool 命中率也会下降。二级索引叶子存主键，UUID 36 字节对比 BIGINT 8 字节，所有二级索引都会变大。所以单库优先自增 BIGINT；需要全局唯一就用雪花、号段或 ULID 这种趋势递增的 ID，别用随机 UUID；业务唯一键单独建唯一索引。MySQL 8 还可以用 <code>innodb_autoinc_lock_mode=2</code> 提升并发插入，但自增值会有空洞。”</p>
+</blockquote>
+<h2 id="09-八道题的共同答题框架"><a href="#09-八道题的共同答题框架" class="headerlink" title="09 八道题的共同答题框架"></a>09 八道题的共同答题框架</h2><p>面试里最加分的不是背出机制，而是让人相信你<strong>在线上处理过</strong>。统一用五段：</p>
+<div class="code-container" data-rel="Text"><figure class="iseeu highlight text"><table><tr><td class="code"><pre><span class="line">1. 结论：一句话给出判断（是/不是、为什么）</span><br><span class="line">2. 机制：两三个关键步骤或数据结构，画出来更好</span><br><span class="line">3. 边界：什么时候会失效/变慢/出事故</span><br><span class="line">4. 落地：我们项目里怎么用，具体到参数或代码</span><br><span class="line">5. 指标：怎么发现、怎么验证（P99、慢 SQL、拒绝数、命中率）</span><br></pre></td></tr></table></figure></div>
+
+<p>三条纪律：</p>
+<ol>
+<li><strong>数字口径要分清</strong>：入口 QPS ≠ 核心写 TPS；日均处理量 ≠ QPS；峰值是生产值还是压测值；</li>
+<li><strong>没做过的说”评估过方案”</strong>，不要硬编；追问三层一定穿帮；</li>
+<li><strong>每题收尾带一句项目细节</strong>，比如”我们按案件 ID 分段加锁””缓存 key 带法院维度”，可信度立刻不一样。</li>
+</ol>
+<h2 id="10-一页纸速查"><a href="#10-一页纸速查" class="headerlink" title="10 一页纸速查"></a>10 一页纸速查</h2><table>
+<thead>
+<tr>
+<th>关键词</th>
+<th>一句话</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>rehash 触发</td>
+<td>负载因子 ≥1 扩容（有子进程 ≥5），&lt;0.1 缩容</td>
+</tr>
+<tr>
+<td>渐进式 rehash</td>
+<td>每次命令迁一个桶，serverCron 100 桶/1ms</td>
+</tr>
+<tr>
+<td>rehash 读写</td>
+<td>读 ht0→ht1，写只写 ht1，删两边查</td>
+</tr>
+<tr>
+<td>大 key 卡顿</td>
+<td>不是 rehash，是 DEL/HGETALL/KEYS 等 O(N) 命令</td>
+</tr>
+<tr>
+<td>大 key 处置</td>
+<td>UNLINK、HSCAN 分批、拆 key、禁用 KEYS</td>
+</tr>
+<tr>
+<td>二级索引查找</td>
+<td>根→叶→首个匹配→扫到不匹配→回表</td>
+</tr>
+<tr>
+<td>覆盖索引</td>
+<td>查询列全在索引里，<code>Using index</code> 不回表</td>
+</tr>
+<tr>
+<td>写盘方式</td>
+<td>日志顺序写，数据页随机写</td>
+</tr>
+<tr>
+<td>WAL</td>
+<td>提交只等 redo/binlog，数据页异步刷</td>
+</tr>
+<tr>
+<td>两阶段提交</td>
+<td>redo prepare → binlog → redo commit</td>
+</tr>
+<tr>
+<td>RabbitMQ 模型</td>
+<td>默认推，prefetch 控在途，手动 ack</td>
+</tr>
+<tr>
+<td>basic.get</td>
+<td>拉模式需轮询，生产不用</td>
+</tr>
+<tr>
+<td>CPU 密集</td>
+<td>N+1</td>
+</tr>
+<tr>
+<td>IO 密集</td>
+<td>N×(1+W/C)，2N 只是经验值</td>
+</tr>
+<tr>
+<td>受限下游并发</td>
+<td>QPS × 平均耗时（利特尔法则）</td>
+</tr>
+<tr>
+<td>看门狗</td>
+<td>30s 租期、每 10s 续；指定 leaseTime 不生效</td>
+</tr>
+<tr>
+<td>看门狗风险</td>
+<td>hang 不释放、分区双持有、长 GC</td>
+</tr>
+<tr>
+<td>热 key 定位</td>
+<td><code>--hotkeys</code>、OBJECT FREQ、代理/埋点</td>
+</tr>
+<tr>
+<td>热 key 解决</td>
+<td>本地缓存、拆 key、限流、预热</td>
+</tr>
+<tr>
+<td>非自增主键</td>
+<td>页分裂、碎片、随机 IO、二级索引变大</td>
+</tr>
+<tr>
+<td>全局唯一 ID</td>
+<td>雪花、号段、ULID，别用随机 UUID</td>
+</tr>
+</tbody></table>
+<h2 id="11-60-秒复盘话术"><a href="#11-60-秒复盘话术" class="headerlink" title="11 60 秒复盘话术"></a>11 60 秒复盘话术</h2><p><strong>问题</strong>：”挑一道你今天印象最深的题讲讲。”</p>
+<blockquote>
+<p>“我讲 Redis 的 rehash 和大 key 吧。rehash 是渐进式的：扩容时分配两倍空间，每次命令顺带迁一个桶，空闲时每轮 100 个桶且限时 1 毫秒，迁移期间读先查旧表再查新表、写只写新表。所以 rehash 不会整体卡住，大 key 也不会因为 rehash 被整体搬动，因为搬的是指针。真正会卡的是大 key 上的 O(N) 命令，比如 DEL 一个百万元素的 Hash、HGETALL、KEYS，Redis 单线程会被阻塞。线上我们用 UNLINK 异步删、HSCAN 分批清，把大 key 按时间或 ID 拆小，同时用 –bigkeys 和 SLOWLOG 做巡检。放到项目里，法院案件缓存我们也做了类似约束：单 key 控制在几千元素以内，缓存只存非敏感摘要。”</p>
+</blockquote>
+<hr>
+<p><strong>最后记住三句话：</strong></p>
+<ol>
+<li><strong>组件题都要落到”边界”</strong>：rehash 不卡但 O(N) 命令卡；WAL 快但数据页是异步刷；推模式省轮询但依赖 prefetch 背压。</li>
+<li><strong>参数题都要落到”约束”</strong>：线程数受下游容量、内存和竞争限制；看门狗受租期、GC 和分区限制；队列长度受可接受等待时间限制。</li>
+<li><strong>面试的可信度来自项目细节</strong>：同样一句原理，加上”我们按案件 ID 分段加锁 / 缓存 key 带法院维度 / 3 台服务器按峰值评估”，就是做过和背过的区别。</li>
+</ol>
+
+		</div>
+
+		
+		<div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+			<div class="article-copyright-info-container">
+    <ul>
+        <li><strong>标题:</strong> 复习知识点Day23：面试复盘八题：Redis、MySQL、RabbitMQ与线程池</li>
+        <li><strong>作者:</strong> Percy jie</li>
+        <li><strong>创建于
+                :</strong> 2026-11-24 17:22:21</li>
+        
+            <li>
+                <strong>更新于
+                    :</strong> 2026-11-24 17:22:21
+            </li>
+        
+        <li>
+            <strong>链接:</strong> https://percyjie.github.io/2026/11/24/复习知识点Day23-面试复盘八题：Redis、MySQL、RabbitMQ与线程池/
+        </li>
+        <li>
+            <strong>
+                版权声明:
+            </strong>
+            
+
+            
+                本文章采用 <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a> 进行许可。
+            
+        </li>
+    </ul>
+</div>
+
+		</div>
+		
+
+		
+		<ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E9%9D%A2%E8%AF%95/">#面试</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/MySQL/">#MySQL</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9/">#复习知识点</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Redis/">#Redis</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/%E7%BA%BF%E7%A8%8B%E6%B1%A0/">#线程池</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/RabbitMQ/">#RabbitMQ</a>&nbsp;
+			</li>
+			
+			<li class="tag-item mx-0.5">
+				<a href="/tags/Redisson/">#Redisson</a>&nbsp;
+			</li>
+			
+		</ul>
+		
+
+		
+
+		
+		<div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+			
+			
+			<div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+				<a class="next" rel="next" href="/2026/11/02/%E5%A4%8D%E4%B9%A0%E7%9F%A5%E8%AF%86%E7%82%B9Day22-AI%E5%BA%94%E7%94%A8%E6%88%90%E6%9C%AC%E4%BC%98%E5%8C%96%EF%BC%9A%E6%A8%A1%E5%9E%8B%E8%B7%AF%E7%94%B1%E3%80%81%E7%BC%93%E5%AD%98%E5%91%BD%E4%B8%AD%E4%B8%8E%E4%B8%8A%E4%B8%8B%E6%96%87%E5%8E%8B%E7%BC%A9/">
+					<span class="title flex justify-center items-center">
+						<span class="post-nav-title-item truncate max-w-48">复习知识点Day22：AI应用成本优化：模型路由、缓存命中与上下文压缩</span>
+						<span class="post-nav-item">下一篇</span>
+					</span>
+					<span class="right arrow-icon flex justify-center items-center">
+						<i class="fa-solid fa-chevron-right"></i>
+					</span>
+				</a>
+			</div>
+			
+		</div>
+		
+
+
+		
+		<div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+			<div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        评论
+    </div>
+    
+
+        
+            
+    
+    
+    
+    
+    
+    <div id="utterances-container"
+         data-utterances-theme-light="github-light"
+         data-utterances-theme-dark="github-dark">
+    </div>
+    <script data-swup-reload-script>
+        (function() {
+            const container = document.getElementById("utterances-container");
+            if (!container) {
+                return;
+            }
+
+            const repo = "percyjie/percyjie.github.io";
+            const issueNumber = "";
+            const issueTerm = "pathname";
+            const label = "";
+
+            if (!repo || (!issueNumber && !issueTerm)) {
+                return;
+            }
+
+            container.innerHTML = "";
+
+            const themeLight = container.dataset.utterancesThemeLight || "github-light";
+            const themeDark = container.dataset.utterancesThemeDark || "github-dark";
+            const isDark = document.body.classList.contains("dark-mode");
+            const theme = isDark ? themeDark : themeLight;
+
+            const script = document.createElement("script");
+            script.src = "https://utteranc.es/client.js";
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.setAttribute("repo", repo);
+
+            if (issueNumber) {
+                script.setAttribute("issue-number", issueNumber);
+            } else {
+                script.setAttribute("issue-term", issueTerm);
+            }
+
+            if (label) {
+                script.setAttribute("label", label);
+            }
+
+            script.setAttribute("theme", theme);
+            container.appendChild(script);
+        })();
+    </script>
+
+
+        
+        
+    
+</div>
+
+		</div>
+		
+	</div>
+
+	
+	<div class="toc-content-container">
+		<div class="post-toc-wrap">
+	<div class="post-toc">
+		<div class="toc-title">目录</div>
+		<div class="page-title">复习知识点Day23：面试复盘八题：Redis、MySQL、RabbitMQ与线程池</div>
+		<ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%88%E8%AF%B4%E7%BB%93%E8%AE%BA%EF%BC%9A%E5%85%AB%E9%A2%98%E9%80%9F%E8%A7%88"><span class="nav-text">先说结论：八题速览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#01-Redis-rehash%EF%BC%9A%E5%A4%A7-key-%E4%BC%9A%E4%B8%8D%E4%BC%9A%E5%8D%A1%E4%BD%8F"><span class="nav-text">01 Redis rehash：大 key 会不会卡住</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E4%B8%A4%E5%BC%A0%E8%A1%A8"><span class="nav-text">1.1 为什么需要两张表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E6%89%A9%E5%AE%B9%E3%80%81%E6%89%A9%E5%88%B0%E5%A4%9A%E5%A4%A7"><span class="nav-text">1.2 什么时候扩容、扩到多大</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E6%B8%90%E8%BF%9B%E5%BC%8F-rehash-%E4%BA%94%E6%AD%A5"><span class="nav-text">1.3 渐进式 rehash 五步</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E5%A4%A7-key-%E5%88%B0%E5%BA%95%E4%BC%9A%E4%B8%8D%E4%BC%9A%E5%8D%A1"><span class="nav-text">1.4 大 key 到底会不会卡</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-5-%E7%94%9F%E4%BA%A7%E5%A4%84%E7%BD%AE"><span class="nav-text">1.5 生产处置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-6-%E9%9D%A2%E8%AF%95%E6%80%8E%E4%B9%88%E7%AD%94"><span class="nav-text">1.6 面试怎么答</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#02-MySQL-%E7%B4%A2%E5%BC%95%E6%9F%A5%E6%89%BE%EF%BC%9AWHERE-age-30-%E5%88%B0%E5%BA%95%E6%80%8E%E4%B9%88%E6%9F%A5"><span class="nav-text">02 MySQL 索引查找：WHERE age &#x3D; 30 到底怎么查</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%85%88%E7%9C%8B-B-%E6%A0%91%E9%95%BF%E4%BB%80%E4%B9%88%E6%A0%B7"><span class="nav-text">2.1 先看 B+ 树长什么样</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E4%BA%94%E6%AD%A5%E6%9F%A5%E6%89%BE%E8%BF%87%E7%A8%8B"><span class="nav-text">2.2 五步查找过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%98%E5%8C%96%E5%99%A8%E5%8F%AF%E8%83%BD%E2%80%9D%E6%9C%89%E7%B4%A2%E5%BC%95%E4%B9%9F%E4%B8%8D%E7%94%A8%E2%80%9D"><span class="nav-text">2.3 为什么优化器可能”有索引也不用”</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E9%9D%A2%E8%AF%95%E6%80%8E%E4%B9%88%E7%AD%94"><span class="nav-text">2.4 面试怎么答</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#03-MySQL-%E5%86%99%E7%A3%81%E7%9B%98%EF%BC%9A%E9%A1%BA%E5%BA%8F%E5%86%99%E8%BF%98%E6%98%AF%E9%9A%8F%E6%9C%BA%E5%86%99"><span class="nav-text">03 MySQL 写磁盘：顺序写还是随机写</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E4%B8%80%E6%9D%A1-update-%E7%9A%84%E5%AE%8C%E6%95%B4%E9%93%BE%E8%B7%AF"><span class="nav-text">3.1 一条 update 的完整链路</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%93%AA%E4%BA%9B%E9%A1%BA%E5%BA%8F%E3%80%81%E5%93%AA%E4%BA%9B%E9%9A%8F%E6%9C%BA"><span class="nav-text">3.2 哪些顺序、哪些随机</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%99%E6%A0%B7%E8%AE%BE%E8%AE%A1%E8%BF%98%E5%BF%AB"><span class="nav-text">3.3 为什么这样设计还快</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E5%85%B3%E9%94%AE%E5%8F%82%E6%95%B0%E4%B8%8E%E5%9D%91"><span class="nav-text">3.4 关键参数与坑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E9%9D%A2%E8%AF%95%E6%80%8E%E4%B9%88%E7%AD%94"><span class="nav-text">3.5 面试怎么答</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#04-RabbitMQ%EF%BC%9A%E6%8E%A8%E8%BF%98%E6%98%AF%E6%8B%89%EF%BC%8C%E6%8B%89%E6%B6%88%E6%81%AF%E8%A6%81%E4%B8%80%E7%9B%B4%E8%BD%AE%E8%AF%A2%E5%90%97"><span class="nav-text">04 RabbitMQ：推还是拉，拉消息要一直轮询吗</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E9%BB%98%E8%AE%A4%E6%98%AF%E6%8E%A8%E6%A8%A1%E5%BC%8F"><span class="nav-text">4.1 默认是推模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E6%8B%89%E6%A8%A1%E5%BC%8F-basic-get-%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-text">4.2 拉模式 basic.get 的问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E6%8E%A8%E6%A8%A1%E5%BC%8F%E7%9A%84%E6%B5%81%E6%8E%A7%E4%B8%8E%E5%8F%AF%E9%9D%A0%E6%80%A7"><span class="nav-text">4.3 推模式的流控与可靠性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E5%92%8C-Kafka-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-text">4.4 和 Kafka 的区别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-5-%E9%9D%A2%E8%AF%95%E6%80%8E%E4%B9%88%E7%AD%94"><span class="nav-text">4.5 面试怎么答</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#05-%E7%BA%BF%E7%A8%8B%E6%B1%A0%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88-IO-%E5%AF%86%E9%9B%86-2N%E3%80%81CPU-%E5%AF%86%E9%9B%86-N-1"><span class="nav-text">05 线程池：为什么 IO 密集 2N、CPU 密集 N+1</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E4%B8%A4%E4%B8%AA%E5%85%AC%E5%BC%8F%E7%9A%84%E6%9D%A5%E7%94%B1"><span class="nav-text">5.1 两个公式的来由</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E8%BF%98%E6%9C%89%E4%B8%89%E4%B8%AA%E4%B8%8A%E9%99%90%EF%BC%8C%E5%88%AB%E5%8F%AA%E5%A5%97%E5%85%AC%E5%BC%8F"><span class="nav-text">5.2 还有三个上限，别只套公式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-3-%E9%85%8D%E7%BD%AE%E5%8F%AA%E6%98%AF%E7%AC%AC%E4%B8%80%E6%AD%A5%EF%BC%8C%E9%85%8D%E5%A5%97%E6%9B%B4%E9%87%8D%E8%A6%81"><span class="nav-text">5.3 配置只是第一步，配套更重要</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-4-%E8%99%9A%E6%8B%9F%E7%BA%BF%E7%A8%8B%E8%83%BD%E6%9B%BF%E4%BB%A3%E5%90%97"><span class="nav-text">5.4 虚拟线程能替代吗</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-5-%E9%9D%A2%E8%AF%95%E6%80%8E%E4%B9%88%E7%AD%94"><span class="nav-text">5.5 面试怎么答</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#06-Redisson-%E7%9C%8B%E9%97%A8%E7%8B%97%EF%BC%9A%E7%BB%AD%E6%9C%9F%E6%97%B6%E9%97%B4%E6%80%8E%E4%B9%88%E5%AE%9A%EF%BC%8C%E4%B8%80%E7%9B%B4%E7%BB%AD%E6%9C%9F%E6%9C%89%E9%97%AE%E9%A2%98%E5%90%97"><span class="nav-text">06 Redisson 看门狗：续期时间怎么定，一直续期有问题吗</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-%E6%9C%BA%E5%88%B6"><span class="nav-text">6.1 机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-%E4%B8%BA%E4%BB%80%E4%B9%88%E6%98%AF-1-3"><span class="nav-text">6.2 为什么是 1&#x2F;3</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E4%B8%80%E7%9B%B4%E7%BB%AD%E6%9C%9F%E4%BC%9A%E6%9C%89%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98"><span class="nav-text">6.3 一直续期会有什么问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-4-%E7%94%9F%E4%BA%A7%E5%AE%9E%E8%B7%B5"><span class="nav-text">6.4 生产实践</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-5-%E9%9D%A2%E8%AF%95%E6%80%8E%E4%B9%88%E7%AD%94"><span class="nav-text">6.5 面试怎么答</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#07-Redis-%E7%83%AD-Key%EF%BC%9A%E6%80%8E%E4%B9%88%E5%AE%9A%E4%BD%8D%E3%80%81%E6%80%8E%E4%B9%88%E8%A7%A3%E5%86%B3"><span class="nav-text">07 Redis 热 Key：怎么定位、怎么解决</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E5%AE%9A%E4%BD%8D%E6%89%8B%E6%AE%B5"><span class="nav-text">7.1 定位手段</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E8%A7%A3%E5%86%B3%E6%89%8B%E6%AE%B5"><span class="nav-text">7.2 解决手段</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E9%9D%A2%E8%AF%95%E6%80%8E%E4%B9%88%E7%AD%94"><span class="nav-text">7.3 面试怎么答</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#08-MySQL-%E4%B8%BB%E9%94%AE%E4%B8%8D%E8%87%AA%E5%A2%9E%E4%BC%9A%E6%9C%89%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98"><span class="nav-text">08 MySQL 主键不自增会有什么问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#8-1-%E8%81%9A%E7%B0%87%E7%B4%A2%E5%BC%95%E7%9A%84%E6%8F%92%E5%85%A5%E5%B1%80%E9%83%A8%E6%80%A7"><span class="nav-text">8.1 聚簇索引的插入局部性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-2-%E4%BA%8C%E7%BA%A7%E7%B4%A2%E5%BC%95%E4%BC%9A%E8%A2%AB%E4%B8%BB%E9%94%AE%E6%8B%96%E7%B4%AF"><span class="nav-text">8.2 二级索引会被主键拖累</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-3-%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8%E4%B8%8B%E7%9A%84%E5%85%A8%E5%B1%80%E5%94%AF%E4%B8%80"><span class="nav-text">8.3 分库分表下的全局唯一</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#8-4-%E9%9D%A2%E8%AF%95%E6%80%8E%E4%B9%88%E7%AD%94"><span class="nav-text">8.4 面试怎么答</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#09-%E5%85%AB%E9%81%93%E9%A2%98%E7%9A%84%E5%85%B1%E5%90%8C%E7%AD%94%E9%A2%98%E6%A1%86%E6%9E%B6"><span class="nav-text">09 八道题的共同答题框架</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E4%B8%80%E9%A1%B5%E7%BA%B8%E9%80%9F%E6%9F%A5"><span class="nav-text">10 一页纸速查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#11-60-%E7%A7%92%E5%A4%8D%E7%9B%98%E8%AF%9D%E6%9C%AF"><span class="nav-text">11 60 秒复盘话术</span></a></li></ol>
+
+	</div>
+</div>
+	</div>
+	
+</div>
+
+			</div>
+
+			
+		</div>
+
+		<div class="main-content-footer">
+			<footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2017</span>
+              -
+            
+            2026&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">Percy jie</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        共撰写了 35 篇文章
+                    </span>
+                    
+                        <span>
+                            共 125.8k 字
+                        </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">访问人数</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">总访问量</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">由 <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a> 驱动</span>
+            <span class="text-sm lg:block">主题&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.9.0</a></span>
+        </div>
+        
+        
+            <div>
+                博客已运行 <span class="odometer" id="runtime_days" ></span> 天 <span class="odometer" id="runtime_hours"></span> 小时 <span class="odometer" id="runtime_minutes"></span> 分钟 <span class="odometer" id="runtime_seconds"></span> 秒
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+		</div>
+	</div>
+
+	
+	<div class="post-tools">
+		<div class="post-tools-container">
+	<ul class="article-tools-list">
+		<!-- TOC aside toggle -->
+		
+		<li class="right-bottom-tools page-aside-toggle">
+			<i class="fa-regular fa-outdent"></i>
+		</li>
+		
+
+		<!-- go comment -->
+		
+		<li class="go-comment">
+			<i class="fa-regular fa-comments"></i>
+		</li>
+		
+	</ul>
+</div>
+	</div>
+	
+
+	<div class="right-side-tools-container">
+		<div class="side-tools-container">
+	<ul class="hidden-tools-list">
+		<li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-plus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+			<i class="fa-regular fa-magnifying-glass-minus"></i>
+		</li>
+
+		<li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+			<i class="fa-regular fa-moon"></i>
+		</li>
+
+		<!-- rss -->
+		
+
+		
+
+		<li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+			<i class="fa-regular fa-arrow-down"></i>
+		</li>
+	</ul>
+
+	<ul class="visible-tools-list">
+		<li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+			<i class="fa-regular fa-cog fa-spin"></i>
+		</li>
+		
+		<li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+			<i class="arrow-up fas fa-arrow-up"></i>
+			<span class="percent"></span>
+		</li>
+		
+		
+	</ul>
+</div>
+	</div>
+
+	<div class="image-viewer-container" role="dialog" aria-modal="true" aria-label="图片查看器">
+	<button class="image-viewer-close" type="button" aria-label="关闭">
+		<i class="fa-solid fa-xmark"></i>
+	</button>
+	<button class="image-viewer-prev" type="button" aria-label="上一页">
+		<i class="fa-solid fa-chevron-left"></i>
+	</button>
+	<div class="image-viewer-frame">
+		<img src="" alt="">
+	</div>
+	<div class="image-viewer-exif-panel hidden absolute left-1/2 bottom-20 -translate-x-1/2 w-[min(92vw,420px)] max-h-[60vh] overflow-hidden rounded-2xl bg-background-color-transparent-80 p-4 text-left shadow-redefine-flat backdrop-blur-md" role="dialog" aria-label="EXIF" aria-hidden="true">
+		<div class="flex items-center justify-between mb-3">
+			<span class="text-sm font-semibold text-first-text-color">EXIF</span>
+			<button class="image-viewer-exif-close flex h-8 w-8 items-center justify-center rounded-full bg-background-color-transparent-80 text-first-text-color transition hover:bg-background-color-transparent-40" type="button" aria-label="关闭">
+				<i class="fa-solid fa-xmark text-[0.65rem]"></i>
+			</button>
+		</div>
+		<div class="image-viewer-exif-cards grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide"></div>
+		<template class="image-viewer-exif-card-template">
+			<div class="rounded-lg bg-background-color-transparent-40 px-3 py-2">
+				<div class="image-viewer-exif-card-header flex items-center gap-2 mb-1">
+					<i class="image-viewer-exif-card-icon fa-solid fa-circle-info text-xs text-third-text-color"></i>
+					<div class="image-viewer-exif-card-title text-xs font-semibold text-first-text-color"></div>
+				</div>
+				<div class="image-viewer-exif-card-items flex flex-col gap-1"></div>
+			</div>
+		</template>
+	</div>
+	<button class="image-viewer-exif-toggle flex items-center gap-2 hidden absolute left-1/2 bottom-6 -translate-x-1/2 rounded-full border border-border-color bg-background-color-transparent-80 px-4 py-2 text-first-text-color backdrop-blur-md transition hover:bg-background-color-transparent-40" type="button" aria-label="EXIF" aria-expanded="false">
+		<i class="fa-solid fa-circle-info text-xs"></i>
+		<span class="text-xs font-semibold uppercase tracking-wider">EXIF</span>
+	</button>
+	<button class="image-viewer-next" type="button" aria-label="下一页">
+		<i class="fa-solid fa-chevron-right"></i>
+	</button>
+</div>
+
+
+	
+
+</main>
+
+
+
+<script src="/js/build/libs/Swup.min.js"></script>
+
+<script src="/js/build/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/build/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/build/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    window.swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+
+    window.dispatchEvent(
+        new CustomEvent("redefine:swup:ready", {
+            detail: {
+                swup: window.swup,
+            },
+        }),
+    );
+</script>
+
+
+
+
+	
+<script src="/js/build/main.js" type="module"></script>
+
+
+
+    
+<script src="/js/build/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+
+
+
+  
+<script src="/js/build/libs/Typed.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script src="/js/build/libs/moment-with-locales.min.js" data-swup-reload-script=""></script>
+
+
+
+	
+</body>
+
+</html>
